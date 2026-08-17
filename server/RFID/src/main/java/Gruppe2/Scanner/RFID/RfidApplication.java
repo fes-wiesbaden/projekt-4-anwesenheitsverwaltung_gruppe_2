@@ -1,5 +1,4 @@
 package Gruppe2.Scanner.RFID;
-import Gruppe2.Scanner.RFID.*;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

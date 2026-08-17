@@ -1,9 +1,5 @@
 spring:
   application:
     name: RFID
-  datasource:
-    url: jdbc:mysql://localhost:3396/test
-    username: test
-    password: test
 
 
