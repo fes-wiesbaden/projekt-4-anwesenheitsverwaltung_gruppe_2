@@ -1,4 +1,4 @@
-package Gruppe2.Scanner.RFID.controller;
+package com.feswiesbaden.attendencemanagement.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
