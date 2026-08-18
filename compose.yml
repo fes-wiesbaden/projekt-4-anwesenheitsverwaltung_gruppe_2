@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16
+    container_name: attendance-management-db
+    environment:
+      POSTGRES_DB: attendancemanagementdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - am-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d attendancemanagementdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  
+  server: 
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: attendance-management-server
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/attendancemanagementdb
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_PROFILES_ACTIVE: dockerw
+    ports:
+      - "4100:4100"
+    networks:
+      - am-net
+
+
+networks:
+  am-net: {}
+
+volumes:
+  pgdata: {}
