@@ -27,7 +27,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/attendancemanagementdb
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/attendancemanagementdb
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: admin
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
@@ -36,6 +36,30 @@ services:
       - "4100:4100"
     networks:
       - am-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4100/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  client:
+    build: 
+      context: ./client
+      dockerfile: Dockerfile.dev
+    container_name: attendance-management-client
+    depends_on:
+      server:
+        condition: service_started
+    environment:
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: admin
+    ports:
+      - "5173:5173"
+    networks:
+      - am-net
+    volumes:
+      - ./client:/app:cached
+      - /app/node_modules
 
 
 networks:
