@@ -32,15 +32,12 @@ services:
       SPRING_DATASOURCE_PASSWORD: admin
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_PROFILES_ACTIVE: dockerw
+      SPRING_SECURITY_USER: admin
+      SPRING_SECURITY_PASSWORD: admin
     ports:
       - "4100:4100"
     networks:
       - am-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4100/actuator/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   client:
     build: 
