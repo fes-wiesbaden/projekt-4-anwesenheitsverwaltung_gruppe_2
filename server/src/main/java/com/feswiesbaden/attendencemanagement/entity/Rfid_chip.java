@@ -19,6 +19,6 @@ public class Rfid_chip {
 
     private Long chipId;
 
-    @OneToOne(mappedBy = "rfid_chip")
+    @OneToOne(mappedBy = "rfidChip")
     private Student student;
 }
