@@ -1,11 +1,10 @@
 package com.feswiesbaden.attendencemanagement.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 
 @Entity
 @Setter
@@ -15,7 +14,11 @@ public class Room {
     @Id
     @GeneratedValue
     private Long id;
+
     private String roomName;
+
     private String roomNumber;
 
+    @OneToMany
+    private List<Classroom> classrooms;
 }
