@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  Box,
-  Button,
-  TextField,
-  Alert,
-} from "@mui/material";
+import { Box, Button, TextField, Alert } from "@mui/material";
 
 import "../css/main.css";
 
@@ -17,7 +12,6 @@ function LoginView({ onLoginSuccess }: LoginViewProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
 
   const handleLogin = async () => {
     setError(null);
@@ -59,15 +53,17 @@ function LoginView({ onLoginSuccess }: LoginViewProps) {
 
   return (
     <>
-      <h1>Login</h1>
-      <Box onKeyDown={handleKeyDown}>
+      <h1 className="login-title">Login</h1>
+      <Box onKeyDown={handleKeyDown} className="login-wrapper">
         <TextField
+          className="username-input"
           label="Benutzername"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           fullWidth
         />
         <TextField
+          className="password-input"
           label="Passwort"
           type="password"
           value={password}
@@ -76,7 +72,7 @@ function LoginView({ onLoginSuccess }: LoginViewProps) {
         />
         {error && <Alert severity="error">{error}</Alert>}
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
+        <Box className="loginBtn-wrapper">
           <Button
             variant="contained"
             onClick={handleLogin}
@@ -84,12 +80,8 @@ function LoginView({ onLoginSuccess }: LoginViewProps) {
           >
             {isLoading ? "Wird geprüft..." : "Einloggen"}
           </Button>
-
-          
         </Box>
       </Box>
-
-      
     </>
   );
 }

@@ -87,7 +87,7 @@ function ListView({ onLogout }: ListViewProps) {
 
   return (
     <>
-      <div>
+      <div className="action-buttons">
         <Button variant="outlined" onClick={onLogout}>
           Logout
         </Button>
