@@ -2,25 +2,29 @@
 #include <MFRC522.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <DIYables_LCD_I2C.h>
 
 // ---------- WiFi & MQTT ----------
 const char* WIFI_SSID     = "FES-SuS";
 const char* WIFI_PASSWORD = "SuS-WLAN!Key24";
 
-const char MQTT_BROKER_ADRRESS[] = "10.93.137.0";  // CHANGE TO MQTT BROKER'S ADDRESS
+const char MQTT_BROKER_ADRRESS[] = "10.93.137.0";  
 const int MQTT_PORT = 1883;
-const char MQTT_CLIENT_ID[] = "esp32-rfid-reader";  // CHANGE IT AS YOU DESIRE
-const char MQTT_USERNAME[] = "";                        // CHANGE IT IF REQUIRED, empty if not required
-const char MQTT_PASSWORD[] = "";                        // CHANGE IT IF REQUIRED, empty if not required
+const char MQTT_CLIENT_ID[] = "esp32-rfid-reader";  
+const char MQTT_USERNAME[] = "";                        
+const char MQTT_PASSWORD[] = "";                        
 
 // The MQTT topics that ESP32 should publish/subscribe
-const char PUBLISH_TOPIC[] = "esp32-rfid-reader/checkin";    // CHANGE IT AS YOU DESIRE
-const char SUBSCRIBE_TOPIC[] = "esp32-rfid-reader/checkout";  // CHANGE IT AS YOU DESIRE
+const char PUBLISH_TOPIC[] = "esp32-rfid-reader/checkin";    
+const char SUBSCRIBE_TOPIC[] = "esp32-rfid-reader/checkout";  
 
-const int PUBLISH_INTERVAL = 5000;  // 5 seconds
+const int PUBLISH_INTERVAL = 5000;
 
 const char* topic_pub = "attendance/esp32/status";
 const char* topic_sub = "attendance/esp32/commands";
+
+// ------------ LCD------------------
+DIYables_LCD_I2C lcd(0x27, 16, 2); // I2C address 0x27, 16 column and 2 rows
 
 #define SS_PIN  5  // ESP32 pin GPIO5 
 #define RST_PIN 27 // ESP32 pin GPIO27 
@@ -45,11 +49,31 @@ const unsigned long debounceDelay = 50;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
+
+void lcd_write(const char* text, const char* text2 = nullptr) {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(text);
+
+  if (text2 != nullptr && strlen(text2) > 0) {
+    lcd.setCursor(0, 1);
+    lcd.print(text2);
+  }
+}
+
 void setup() {
 
   Serial.begin(115200);
-  SPI.begin(); // init SPI bus
-  rfid.PCD_Init(); // init MFRC522
+  SPI.begin(); 
+  rfid.PCD_Init(); 
+
+  // init LCD
+  lcd.init();
+  lcd.backlight();
+
+  lcd_write("Attendance Managment");
+  delay(2000);
+  lcd_write("Select an Action below...");
 
   // setup WIFI
   setupWifi();
@@ -83,6 +107,9 @@ void loop() {
       case MODE_CHECK_IN:
         Serial.print("CHECK-IN -> UID: ");
         Serial.println(uid);
+
+        lcd_write("User Test", uid.c_str());
+
         // TODO:
         client.publish("attendance/reader/checkin", uid.c_str(), true);
 
@@ -90,6 +117,9 @@ void loop() {
       case MODE_CHECK_OUT:
         Serial.print("CHECK-OUT -> UID: ");
         Serial.println(uid);
+
+        lcd_write("User Test", uid.c_str());
+        
         // TODO:
         client.publish("attendance/reader/checkout", uid.c_str(), true);
 
@@ -97,6 +127,9 @@ void loop() {
       case MODE_CHECK:
         Serial.print("CHECK -> UID: ");
         Serial.println(uid);
+
+        lcd_write("User Test", uid.c_str());
+        
         // TODO:
         client.publish("attendance/reader/check", uid.c_str(), true);
 
@@ -115,6 +148,7 @@ void loop() {
 }
 
 
+
 void handleButtons(){
   int reading_in = digitalRead(CHECK_IN_BTN);
   int reading_out = digitalRead(CHECK_OUT_BTN);
@@ -125,18 +159,21 @@ void handleButtons(){
     if (lastState_in == HIGH && reading_in == LOW){
       currentMode = MODE_CHECK_IN;
       Serial.println("Mode: CHECK_IN. Tap your card...");
+      lcd_write("CHECK IN: SCAN RFID CARD!");
       lastDebounceTime = now;
     }
 
     if (lastState_out == HIGH && reading_out == LOW ){
       currentMode = MODE_CHECK_OUT;
       Serial.println("Mode: CHECK_OUT. Tap your card...");
+      lcd_write("CHECK OUT: SCAN RFID CARD!");
       lastDebounceTime = now;
     }
 
     if (lastState_chk == HIGH && reading_chk == LOW ){
       currentMode = MODE_CHECK;
       Serial.println("Mode: CHECK. Tap your card...");
+      lcd_write("CHECK: SCAN RFID CARD!");
       lastDebounceTime = now;
     }
   }
