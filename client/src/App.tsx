@@ -45,10 +45,10 @@ function App() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Info</DialogTitle>
+        <DialogTitle className="info-title">Info</DialogTitle>
         <DialogContent>
-          <Typography gutterBottom>
-            <b>Was ist PresenceCTNRL?</b>
+          <Typography gutterBottom className="info-content">
+            <b className="info-headline">Was ist PresenceCTNRL?</b>
             <br />
             <br />
             PresenceCNTRL hilft Lehrkräften und Schüler:innen zuverlässig und
@@ -58,8 +58,8 @@ function App() {
             übersichtlicher Darstellung.
           </Typography>
           <br />
-          <Typography gutterBottom>
-            <b>Du hast noch keinen Account oder Probleme beim einloggen?</b>
+          <Typography gutterBottom className="info-content">
+            <b className="info-headline">Du hast noch keinen Account oder Probleme beim einloggen?</b>
             <br />
             <br />
             Wende dich an deine/n Klassenlehrer:in oder an die Schulverwaltung,
@@ -67,7 +67,7 @@ function App() {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setHelpOpen(false)}>Schließen</Button>
+          <Button className="info-close" onClick={() => setHelpOpen(false)}>Schließen</Button>
         </DialogActions>
       </Dialog>
     </>
