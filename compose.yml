@@ -60,6 +60,8 @@ services:
       SPRING_PROFILES_ACTIVE: dockerw
       SPRING_SECURITY_USER: admin
       SPRING_SECURITY_PASSWORD: admin
+      SPRING_DOCKER_COMPOSE_ENABLED: true
+      MQTT_BROKER_URL: tcp://mosquitto:1883
     ports:
       - "4100:4100"
     networks:
