@@ -17,6 +17,30 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mqtt-server
+    ports:
+      # Standard MQTT protocol
+      - "1883:1883"
+      # MQTT over WebSocket
+      - "9001:9001"
+    volumes:
+      # Mount configuration directory
+      - ./mosquitto/config:/mosquitto/config
+      # Persist message data
+      - mosquitto-data:/mosquitto/data
+      # Persist log files
+      - mosquitto-log:/mosquitto/log
+    networks:
+     - am-net
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -i healthcheck -W 3 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
   
   server: 
     build:
@@ -26,6 +50,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mosquitto:
+        condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/attendancemanagementdb
       SPRING_DATASOURCE_USERNAME: admin
@@ -64,3 +90,5 @@ networks:
 
 volumes:
   pgdata: {}
+  mosquitto-data: {}
+  mosquitto-log: {}
