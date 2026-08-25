@@ -73,13 +73,13 @@ void setup() {
 
   lcd_write("Attendance Managment");
   delay(2000);
-  lcd_write("Select an Action below...");
 
   // setup WIFI
   setupWifi();
 
   // setup MQTT
   setup_mqtt();
+
 
   // init btns
   pinMode(CHECK_IN_BTN, INPUT_PULLUP);
@@ -88,6 +88,7 @@ void setup() {
 
 
   Serial.println("System ready. Press a button, then tap a card.");
+  lcd_write("Select an Action below...");
 }
 
 void loop() {
@@ -109,6 +110,7 @@ void loop() {
         Serial.println(uid);
 
         lcd_write("User Test", uid.c_str());
+        delay(1000);
 
         // TODO:
         client.publish("attendance/reader/checkin", uid.c_str(), true);
@@ -119,6 +121,7 @@ void loop() {
         Serial.println(uid);
 
         lcd_write("User Test", uid.c_str());
+        delay(1000);
         
         // TODO:
         client.publish("attendance/reader/checkout", uid.c_str(), true);
@@ -129,6 +132,7 @@ void loop() {
         Serial.println(uid);
 
         lcd_write("User Test", uid.c_str());
+        delay(1000);
         
         // TODO:
         client.publish("attendance/reader/check", uid.c_str(), true);
@@ -143,6 +147,7 @@ void loop() {
 
       currentMode = MODE_NONE;
       Serial.println("System ready. Press a button, then tap a card.");
+      lcd_write("Select an Action below...");
     }
   }
 }
@@ -159,21 +164,21 @@ void handleButtons(){
     if (lastState_in == HIGH && reading_in == LOW){
       currentMode = MODE_CHECK_IN;
       Serial.println("Mode: CHECK_IN. Tap your card...");
-      lcd_write("CHECK IN: SCAN RFID CARD!");
+      lcd_write("CHECK IN", "SCAN RFID CARD!");
       lastDebounceTime = now;
     }
 
     if (lastState_out == HIGH && reading_out == LOW ){
       currentMode = MODE_CHECK_OUT;
       Serial.println("Mode: CHECK_OUT. Tap your card...");
-      lcd_write("CHECK OUT: SCAN RFID CARD!");
+      lcd_write("CHECK OUT", "SCAN RFID CARD!");
       lastDebounceTime = now;
     }
 
     if (lastState_chk == HIGH && reading_chk == LOW ){
       currentMode = MODE_CHECK;
       Serial.println("Mode: CHECK. Tap your card...");
-      lcd_write("CHECK: SCAN RFID CARD!");
+      lcd_write("CHECK", "SCAN RFID CARD!");
       lastDebounceTime = now;
     }
   }
@@ -186,16 +191,21 @@ void handleButtons(){
 void setupWifi(){
   delay(20);
   Serial.print("Connecting to WIFI: ");
+  lcd_write("Connecting to WIFI: ");
   Serial.println(WIFI_SSID);
+  lcd_write(WIFI_SSID);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   while(WiFi.status() != WL_CONNECTED){
     delay(500);
     Serial.print(".");
+    lcd_write(".");
   }
 
   Serial.println();
   Serial.print("Wifi connected, IP: ");
+  lcd_write("Wifi connected");
+  delay(200);
   Serial.println(WiFi.localIP());
 }
 
