@@ -7,8 +7,6 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Setter
-@Getter
 @Table(name = "users")
 public class User {
     @Id
@@ -24,5 +22,8 @@ public class User {
 
     @Column(unique = true)
     private String chipId;
+
+    @Enumerated(EnumType.STRING)
+    private Role role;
 
 }
