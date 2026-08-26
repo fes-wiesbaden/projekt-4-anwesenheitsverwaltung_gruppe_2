@@ -1,6 +1,10 @@
 import {
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   InputLabel,
   MenuItem,
@@ -15,6 +19,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import "../css/main.css";
 import { useState } from "react";
+import { TrendingUp } from "@mui/icons-material";
 
 interface ListViewProps {
   onLogout: () => void;
@@ -34,7 +39,10 @@ function ListView({ onLogout }: ListViewProps) {
 
   const [isEditing, setIsEditing] = useState(false);
   const [selectedClass, setSelectedClass] = useState("");
+  const [exportFormat, setExportFormat] = useState("");
   const [classes, setClasses] = useState(DUMMY_CLASSES);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const columns: GridColDef<(typeof rows)[number]>[] = [
     { field: "id", headerName: "ID", width: 90 },
@@ -91,25 +99,26 @@ function ListView({ onLogout }: ListViewProps) {
         <Button variant="outlined" onClick={onLogout}>
           Logout
         </Button>
-        <Button variant="outlined" onClick={// TODO: Optionen Popup implementieren
-        () => alert("Optionen (Export, Einstellungen)")}>
+        <Button variant="outlined" onClick={() => setOptionsOpen(true)}>
           Optionen
         </Button>
       </div>
       <h1>Liste:</h1>
       <div className="filter-wrapper">
         <FormControl fullWidth>
-          <InputLabel id="demo-simple-select-label">Klasse</InputLabel>
-          <Select // TODO: value anpassen und mit echter Klassenliste verbinden
-            labelId="demo-simple-select-label"
-            id="demo-simple-select"
-            value={""}
+          <InputLabel>Klasse</InputLabel>
+          <Select
+            labelId="class-select-label"
+            id="class-select"
+            value={selectedClass}
             label="Klasse"
+            onChange={(e) => setSelectedClass(e.target.value)}
           >
-            <MenuItem value="class1">Klasse 1</MenuItem>
-            <MenuItem value="class2">Klasse 2</MenuItem>
-            <MenuItem value="class3">Klasse 3</MenuItem>
-            <MenuItem value="class4">Klasse 4</MenuItem>
+            {classes.map((c) => (
+              <MenuItem key={c.id} value={c.id}>
+                {c.label}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
         <TextField
@@ -158,6 +167,61 @@ function ListView({ onLogout }: ListViewProps) {
           Löschen
         </Button>
       )}
+      <Dialog
+        open={optionsOpen}
+        onClose={() => setOptionsOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle className="info-title">Optionen</DialogTitle>
+        {exportOpen && (
+          <FormControl fullWidth>
+            <InputLabel>Format</InputLabel>
+            <Select
+              labelId="format-select-label"
+              id="format-select"
+              value={exportFormat}
+              label="Format"
+              onChange={(e) => setExportFormat(e.target.value)}
+            >
+              <MenuItem value="pdf">PDF</MenuItem>
+              <MenuItem value="excel">Excel</MenuItem>
+              <MenuItem value="wav">WAV</MenuItem>
+            </Select>
+          </FormControl>
+        )}
+        <DialogContent>
+          {exportOpen && ( // TODO: Export Funktionalität implementieren
+            <Button
+              variant="contained"
+              onClick={() => {
+                alert("Export");
+              }}
+            >
+              Exportieren
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            onClick={() => {
+              setExportOpen(!exportOpen);
+            }}
+          >
+            {!exportOpen ? "Exportieroptionen" : "Abbrechen"}
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            className="info-close"
+            onClick={() => {
+              setOptionsOpen(false);
+              setExportOpen(false);
+            }}
+          >
+            Schließen
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
