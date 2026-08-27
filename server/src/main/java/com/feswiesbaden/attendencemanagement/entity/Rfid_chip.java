@@ -6,18 +6,20 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
 @Setter
 @Getter
-@Table(name = "rfid_chips")
+@Table(name = "rfid_chips", uniqueConstraints = @UniqueConstraint(columnNames = "chipId"))
 public class Rfid_chip {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    private Long chipId;
+    private String chipId;
 
     @OneToOne(mappedBy = "rfidChip")
     private Student student;

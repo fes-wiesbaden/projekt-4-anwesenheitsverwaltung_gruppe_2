@@ -1,7 +1,12 @@
 package com.feswiesbaden.attendencemanagement.service;
 
+import com.feswiesbaden.attendencemanagement.entity.Rfid_chip;
+import com.feswiesbaden.attendencemanagement.repository.RfidRepo;
+import jakarta.annotation.PostConstruct;
 import org.eclipse.paho.client.mqttv3.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
@@ -10,56 +15,148 @@ import java.nio.charset.StandardCharsets;
 @Service
 public class MqttService {
 
-   private static final String CLIENT_ID = MqttClient.generateClientId();
+    private final RfidRepo rfidRepo;
+    private final String brokerUrl;
 
-   public String[] topics = {
-           "attendance/reader/checkin",
-           "attendance/reader/checkout",
-           "attendance/reader/check"
-   };
+    private static final String CLIENT_ID = MqttClient.generateClientId();
+    private final String[] topics = new String[]{
+            "attendance/reader/checkin",
+            "attendance/reader/checkout",
+            "attendance/reader/check",
+            "attendance/reader/set"
+    };
 
-   MqttClient client;
+    private enum SaveResult {SAVED, DUPLICATE, INVALID}
 
-   public MqttService(@Value("${mqtt.broker.url}") String brokerUrl) throws MqttException{
-       client = new MqttClient(brokerUrl, CLIENT_ID, new MemoryPersistence());
-       MqttConnectOptions options = new MqttConnectOptions();
-       options.setCleanSession(true);
+    private enum CheckResult {CHECKED_IN, CHECKED_OUT, CHECKED, INVALID}
 
-       client.setCallback(new MqttCallback() {
-           @Override
-           public void connectionLost(Throwable cause) {
+    private static final String TOPIC_SET_RFID = "attendance/server/setRfid";
+    private static final String TOPIC_SET_RESULT = "attendance/server/setResult";
+    private static final String TOPIC_STATUS = "attendance/server/status";
 
-           }
+    private static final String TOPIC_CHECK_IN_RESULT = "attendance/server/checkin";
+    private static final String TOPIC_CHECK_OUT_RESULT = "attendance/server/checkout";
+    private static final String TOPIC_CHECK_RESULT = "attendance/server/check";
 
-           @Override
-           public void messageArrived(String topic, MqttMessage message) throws Exception {
-               HandleMqttMessages(topic, message);
-//               System.out.println(topic + ": " + message);
-           }
+    MqttClient client;
 
-           @Override
-           public void deliveryComplete(IMqttDeliveryToken token) {
+    @Autowired
+    public MqttService(RfidRepo rfidRepo, @Value("${mqtt.broker.url}") String brokerUrl) {
+        this.rfidRepo = rfidRepo;
+        this.brokerUrl = brokerUrl;
+    }
 
-           }
-       });
+    @PostConstruct
+    public void init() throws MqttException {
+        client = new MqttClient(brokerUrl, CLIENT_ID, new MemoryPersistence());
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setCleanSession(true);
 
-       client.connect(options);
-       client.subscribe("#", 1);
+        client.setCallback(new MqttCallback() {
+            @Override
+            public void connectionLost(Throwable cause) {
+                System.err.println("Connection lost: " + cause.getMessage());
+            }
 
-       client.publish("attendance/server/status", "Server is online!".getBytes(StandardCharsets.UTF_8),
-               2, false);
-   }
+            private final java.util.concurrent.ExecutorService mqttWorker =
+                    java.util.concurrent.Executors.newSingleThreadExecutor();
 
-   public void HandleMqttMessages(String topic, MqttMessage message){
+            @Override
+            public void messageArrived(String topic, MqttMessage message) {
+                mqttWorker.submit(() -> {
+                    try {
+                        handleMqttMessages(topic, message);
+                    } catch (Exception e) {
+                        System.err.println("Error handling MQTT message on " + topic + ": " + e.getMessage());
+                    }
+                });
+            }
+
+            @Override
+            public void deliveryComplete(IMqttDeliveryToken token) {
+
+            }
+        });
+
+        client.connect(options);
+//       client.subscribe("#", 1);
+        client.subscribe(topics, new int[]{1, 1, 1, 1});
+
+        // inform mqtt
+        client.publish(TOPIC_STATUS, "Server is online!".getBytes(StandardCharsets.UTF_8),
+                2, false);
+    }
+
+    public void handleMqttMessages(String topic, MqttMessage message) throws MqttException {
+        String chipId = new String(message.getPayload(), StandardCharsets.UTF_8).trim().toLowerCase();
         switch (topic) {
             case "attendance/reader/checkin":
-                System.out.println("Student " + message + " checking in");
+                checkin(chipId);
+                client.publish(TOPIC_CHECK_IN_RESULT, "CHECKED IN".getBytes(StandardCharsets.UTF_8), 2, false);
                 break;
             case "attendance/reader/checkout":
-                System.out.println("Student " + message + " checking out");
+                checkout(chipId);
+                client.publish(TOPIC_CHECK_OUT_RESULT, "CHECKED OUT".getBytes(StandardCharsets.UTF_8), 2, false);
+                break;
+            case "attendance/reader/check":
+                check(chipId);
+                client.publish(TOPIC_CHECK_RESULT, "CHECKED".getBytes(StandardCharsets.UTF_8), 2, false);
+                break;
+            case "attendance/reader/set":
+                SaveResult saved = saveRfid(chipId);
+
+                switch (saved) {
+                    case DUPLICATE -> client.publish(TOPIC_SET_RESULT,
+                            "Chip is already in DB".getBytes(StandardCharsets.UTF_8), 2, false);
+                    case SAVED -> client.publish(TOPIC_SET_RESULT, "Saved".getBytes(StandardCharsets.UTF_8), 2, false);
+                    case INVALID -> client.publish(TOPIC_SET_RESULT,
+                            "Chip is invalid".getBytes(StandardCharsets.UTF_8), 2, false);
+                }
                 break;
             default:
                 break;
         }
-   }
+    }
+
+    public void setRfid() throws MqttException {
+        client.publish(TOPIC_SET_RFID, new byte[0], 1, false);
+    }
+
+    private SaveResult saveRfid(String chipId) throws MqttException {
+        if (chipId.isEmpty()) return SaveResult.INVALID;
+        if (rfidRepo.existsByChipId(chipId)) return SaveResult.DUPLICATE;
+
+        Rfid_chip chip = new Rfid_chip();
+        chip.setChipId(chipId);
+
+        try {
+            rfidRepo.save(chip);
+            System.out.println("Saved " + chipId + " Chip to DB!");
+            return SaveResult.SAVED;
+        } catch (DataIntegrityViolationException e) {
+            System.out.println(chipId + " Chip is already in DB!");
+            return SaveResult.DUPLICATE;
+        }
+    }
+
+    private CheckResult checkin(String chipId) {
+        if (chipId.isEmpty()) return CheckResult.INVALID;
+        if (!rfidRepo.existsByChipId(chipId)) return CheckResult.INVALID;
+
+        System.out.println("Student " + chipId + " checking out");
+        // TODO
+        return CheckResult.CHECKED_IN;
+    }
+
+    private CheckResult checkout(String chipId) {
+        System.out.println("Student " + chipId + " checking out");
+        // TODO
+        return CheckResult.CHECKED_OUT;
+    }
+
+    private CheckResult check(String chipId) {
+        System.out.println("Student " + chipId + " checking");
+        // TODO
+        return CheckResult.CHECKED;
+    }
 }
