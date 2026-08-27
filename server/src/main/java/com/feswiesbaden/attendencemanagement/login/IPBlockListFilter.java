@@ -2,6 +2,7 @@ package com.feswiesbaden.attendencemanagement.login;
 
 import java.io.IOException;
 
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.feswiesbaden.attendencemanagement.service.IPBlockListService;
@@ -10,12 +11,9 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
+@Component
 @RequiredArgsConstructor
 public class IPBlockListFilter extends OncePerRequestFilter{
 
