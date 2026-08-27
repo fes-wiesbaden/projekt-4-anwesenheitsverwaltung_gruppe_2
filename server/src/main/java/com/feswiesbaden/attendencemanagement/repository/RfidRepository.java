@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface RfidRepo extends JpaRepository<Rfid_chip, UUID> {
+public interface RfidRepository extends JpaRepository<Rfid_chip, UUID> {
     Rfid_chip findByChipId(String chipId);
     boolean existsByChipId(String chipId);
 }

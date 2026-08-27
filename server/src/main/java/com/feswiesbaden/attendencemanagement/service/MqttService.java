@@ -1,7 +1,12 @@
 package com.feswiesbaden.attendencemanagement.service;
 
+import com.feswiesbaden.attendencemanagement.entity.Attendance;
+import com.feswiesbaden.attendencemanagement.entity.Classroom;
 import com.feswiesbaden.attendencemanagement.entity.Rfid_chip;
-import com.feswiesbaden.attendencemanagement.repository.RfidRepo;
+import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
+import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
+import com.feswiesbaden.attendencemanagement.repository.RfidRepository;
+import com.feswiesbaden.attendencemanagement.repository.StudentRepository;
 import jakarta.annotation.PostConstruct;
 import org.eclipse.paho.client.mqttv3.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +20,10 @@ import java.nio.charset.StandardCharsets;
 @Service
 public class MqttService {
 
-    private final RfidRepo rfidRepo;
+    private final RfidRepository rfidRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final StudentRepository studentRepository;
+    private final ClassroomRepository classroomRepository;
     private final String brokerUrl;
 
     private static final String CLIENT_ID = MqttClient.generateClientId();
@@ -41,8 +49,16 @@ public class MqttService {
     MqttClient client;
 
     @Autowired
-    public MqttService(RfidRepo rfidRepo, @Value("${mqtt.broker.url}") String brokerUrl) {
-        this.rfidRepo = rfidRepo;
+    public MqttService(
+            RfidRepository rfidRepository,
+            AttendanceRepository attendanceRepository,
+            StudentRepository studentRepository,
+            ClassroomRepository classroomRepository,
+            @Value("${mqtt.broker.url}") String brokerUrl) {
+        this.rfidRepository = rfidRepository;
+        this.attendanceRepository = attendanceRepository;
+        this.classroomRepository = classroomRepository;
+        this.studentRepository = studentRepository;
         this.brokerUrl = brokerUrl;
     }
 
@@ -124,13 +140,13 @@ public class MqttService {
 
     private SaveResult saveRfid(String chipId) throws MqttException {
         if (chipId.isEmpty()) return SaveResult.INVALID;
-        if (rfidRepo.existsByChipId(chipId)) return SaveResult.DUPLICATE;
+        if (rfidRepository.existsByChipId(chipId)) return SaveResult.DUPLICATE;
 
         Rfid_chip chip = new Rfid_chip();
         chip.setChipId(chipId);
 
         try {
-            rfidRepo.save(chip);
+            rfidRepository.save(chip);
             System.out.println("Saved " + chipId + " Chip to DB!");
             return SaveResult.SAVED;
         } catch (DataIntegrityViolationException e) {
@@ -141,7 +157,7 @@ public class MqttService {
 
     private CheckResult checkin(String chipId) {
         if (chipId.isEmpty()) return CheckResult.INVALID;
-        if (!rfidRepo.existsByChipId(chipId)) return CheckResult.INVALID;
+        if (!rfidRepository.existsByChipId(chipId)) return CheckResult.INVALID;
 
         System.out.println("Student " + chipId + " checking out");
         // TODO
