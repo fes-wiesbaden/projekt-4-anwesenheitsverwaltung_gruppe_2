@@ -19,9 +19,9 @@ public class Attendance {
 
     private Date date;
 
-    private LocalDateTime login;
+    private LocalDateTime checkin;
 
-    private LocalDateTime logout;
+    private LocalDateTime checkout;
 
     private Attendance_status status;
 

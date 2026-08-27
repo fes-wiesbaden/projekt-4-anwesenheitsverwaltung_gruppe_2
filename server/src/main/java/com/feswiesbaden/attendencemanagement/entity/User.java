@@ -12,6 +12,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+import java.util.UUID;
+
 @Entity
 @Data
 @NoArgsConstructor
@@ -19,8 +22,8 @@ import lombok.NoArgsConstructor;
 @Table(name = "users")
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     private String displayName;
 
@@ -30,8 +33,7 @@ public class User {
     @Column(nullable=false)
     private String password;
 
-    @Column(unique = true)
-    private String chipId;
+    private LocalDate createdAt;
 
     @Enumerated(EnumType.STRING)
     private Role role;
