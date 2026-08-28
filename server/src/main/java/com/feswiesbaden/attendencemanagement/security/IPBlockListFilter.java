@@ -1,4 +1,4 @@
-package com.feswiesbaden.attendencemanagement.login;
+package com.feswiesbaden.attendencemanagement.security;
 
 import java.io.IOException;
 

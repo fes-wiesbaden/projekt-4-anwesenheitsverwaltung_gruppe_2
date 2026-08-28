@@ -1,4 +1,4 @@
-package com.feswiesbaden.attendencemanagement.login;
+package com.feswiesbaden.attendencemanagement.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
