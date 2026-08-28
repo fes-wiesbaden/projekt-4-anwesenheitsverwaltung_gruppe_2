@@ -29,18 +29,33 @@ public class JwtUtil {
     public String generateToken(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
 
+        String username = userPrincipal.getUsername();
+
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
-        return Jwts.builder()
+        log.info("Generating JWT for user: {}", username);
+        log.debug("JWT expiration: {}", expiryDate);
+        log.debug("JWT expiration duration: {} ms", jwtExpirationMs);
+
+        String token = Jwts.builder()
                 .subject(userPrincipal.getUsername())
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
                 .compact();
+        log.info("JWT successfully generated for user: {}", username);
+        log.debug("Generated JWT: {}", token);
+        return token;
     }
 
     public String extractUsername(String token) {
+        log.debug("Attempting to extract username from JWT");
+
+        if (token == null || token.isBlank()) {
+            log.warn("JWT validation failed: token is null or empty");
+        }
+
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
