@@ -5,18 +5,18 @@
 #include <DIYables_LCD_I2C.h>
 
 // ---------- WiFi & MQTT ----------
-const char* WIFI_SSID     = "FES-SuS";
+const char* WIFI_SSID = "FES-SuS";
 const char* WIFI_PASSWORD = "SuS-WLAN!Key24";
 
-const char MQTT_BROKER_ADRRESS[] = "10.93.137.0";  
+const char MQTT_BROKER_ADRRESS[] = "10.93.132.23";
 const int MQTT_PORT = 1883;
-const char MQTT_CLIENT_ID[] = "esp32-rfid-reader";  
-const char MQTT_USERNAME[] = "";                        
-const char MQTT_PASSWORD[] = "";                        
+const char MQTT_CLIENT_ID[] = "esp32-rfid-reader";
+const char MQTT_USERNAME[] = "";
+const char MQTT_PASSWORD[] = "";
 
 // The MQTT topics that ESP32 should publish/subscribe
-const char PUBLISH_TOPIC[] = "esp32-rfid-reader/checkin";    
-const char SUBSCRIBE_TOPIC[] = "esp32-rfid-reader/checkout";  
+const char PUBLISH_TOPIC[] = "esp32-rfid-reader/checkin";
+const char SUBSCRIBE_TOPIC[] = "esp32-rfid-reader/checkout";
 
 const int PUBLISH_INTERVAL = 5000;
 
@@ -24,10 +24,10 @@ const char* topic_pub = "attendance/esp32/status";
 const char* topic_sub = "attendance/esp32/commands";
 
 // ------------ LCD------------------
-DIYables_LCD_I2C lcd(0x27, 16, 2); // I2C address 0x27, 16 column and 2 rows
+DIYables_LCD_I2C lcd(0x27, 16, 2);  // I2C address 0x27, 16 column and 2 rows
 
-#define SS_PIN  5  // ESP32 pin GPIO5 
-#define RST_PIN 27 // ESP32 pin GPIO27 
+#define SS_PIN 5    // ESP32 pin GPIO5
+#define RST_PIN 27  // ESP32 pin GPIO27
 
 #define CHECK_IN_BTN 27
 #define CHECK_BTN 26
@@ -35,11 +35,15 @@ DIYables_LCD_I2C lcd(0x27, 16, 2); // I2C address 0x27, 16 column and 2 rows
 
 MFRC522 rfid(SS_PIN, RST_PIN);
 
-enum Mode {MODE_NONE, MODE_CHECK_IN, MODE_CHECK_OUT, MODE_CHECK};
+enum Mode { MODE_NONE,
+            MODE_CHECK_IN,
+            MODE_CHECK_OUT,
+            MODE_CHECK,
+            MODE_SET };
 Mode currentMode = MODE_NONE;
 
 // Debounce state for each button
-int lastState_in  = HIGH;
+int lastState_in = HIGH;
 int lastState_out = HIGH;
 int lastState_chk = HIGH;
 
@@ -64,8 +68,8 @@ void lcd_write(const char* text, const char* text2 = nullptr) {
 void setup() {
 
   Serial.begin(115200);
-  SPI.begin(); 
-  rfid.PCD_Init(); 
+  SPI.begin();
+  rfid.PCD_Init();
 
   // init LCD
   lcd.init();
@@ -86,7 +90,6 @@ void setup() {
   pinMode(CHECK_OUT_BTN, INPUT_PULLUP);
   pinMode(CHECK_BTN, INPUT_PULLUP);
 
-
   Serial.println("System ready. Press a button, then tap a card.");
   lcd_write("Select an Action below...");
 }
@@ -95,51 +98,62 @@ void loop() {
   handleButtons();
   loop_mqtt();
 
-  if (currentMode != MODE_NONE){
-    if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()){
+
+  if (currentMode != MODE_NONE) {
+    if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
       String uid = "";
-      for(byte i = 0; i < rfid.uid.size; i++){
-        uid += String(rfid.uid.uidByte[i] < 0x10 ? "0": "");
+      for (byte i = 0; i < rfid.uid.size; i++) {
+        uid += String(rfid.uid.uidByte[i] < 0x10 ? "0" : "");
         uid += String(rfid.uid.uidByte[i], HEX);
       }
       uid.toUpperCase();
 
       switch (currentMode) {
-      case MODE_CHECK_IN:
-        Serial.print("CHECK-IN -> UID: ");
-        Serial.println(uid);
+        case MODE_CHECK_IN:
+          Serial.print("CHECK-IN -> UID: ");
+          Serial.println(uid);
 
-        lcd_write("User Test", uid.c_str());
-        delay(1000);
+          lcd_write("User Test", uid.c_str());
+          delay(1000);
 
-        // TODO:
-        client.publish("attendance/reader/checkin", uid.c_str(), true);
+          // TODO:
+          client.publish("attendance/reader/checkin", uid.c_str(), true);
 
-        break;
-      case MODE_CHECK_OUT:
-        Serial.print("CHECK-OUT -> UID: ");
-        Serial.println(uid);
+          break;
+        case MODE_CHECK_OUT:
+          Serial.print("CHECK-OUT -> UID: ");
+          Serial.println(uid);
 
-        lcd_write("User Test", uid.c_str());
-        delay(1000);
-        
-        // TODO:
-        client.publish("attendance/reader/checkout", uid.c_str(), true);
+          lcd_write("User Test", uid.c_str());
+          delay(1000);
 
-        break;
-      case MODE_CHECK:
-        Serial.print("CHECK -> UID: ");
-        Serial.println(uid);
+          // TODO:
+          client.publish("attendance/reader/checkout", uid.c_str(), true);
 
-        lcd_write("User Test", uid.c_str());
-        delay(1000);
-        
-        // TODO:
-        client.publish("attendance/reader/check", uid.c_str(), true);
+          break;
+        case MODE_CHECK:
+          Serial.print("CHECK -> UID: ");
+          Serial.println(uid);
 
-        break;
-      default:
-        break;
+          lcd_write("User Test", uid.c_str());
+          delay(1000);
+
+          // TODO:
+          client.publish("attendance/reader/check", uid.c_str(), true);
+
+          break;
+        case MODE_SET:
+          Serial.print("SET -> UID: ");
+          Serial.println(uid);
+
+          lcd_write(uid.c_str());
+          delay(1000);
+
+          client.publish("attendance/reader/set", uid.c_str(), true);
+
+          break;
+        default:
+          break;
       }
 
       rfid.PICC_HaltA();
@@ -154,28 +168,28 @@ void loop() {
 
 
 
-void handleButtons(){
+void handleButtons() {
   int reading_in = digitalRead(CHECK_IN_BTN);
   int reading_out = digitalRead(CHECK_OUT_BTN);
   int reading_chk = digitalRead(CHECK_BTN);
 
   unsigned long now = millis();
-  if (now - lastDebounceTime > debounceDelay ){
-    if (lastState_in == HIGH && reading_in == LOW){
+  if (now - lastDebounceTime > debounceDelay) {
+    if (lastState_in == HIGH && reading_in == LOW) {
       currentMode = MODE_CHECK_IN;
       Serial.println("Mode: CHECK_IN. Tap your card...");
       lcd_write("CHECK IN", "SCAN RFID CARD!");
       lastDebounceTime = now;
     }
 
-    if (lastState_out == HIGH && reading_out == LOW ){
+    if (lastState_out == HIGH && reading_out == LOW) {
       currentMode = MODE_CHECK_OUT;
       Serial.println("Mode: CHECK_OUT. Tap your card...");
       lcd_write("CHECK OUT", "SCAN RFID CARD!");
       lastDebounceTime = now;
     }
 
-    if (lastState_chk == HIGH && reading_chk == LOW ){
+    if (lastState_chk == HIGH && reading_chk == LOW) {
       currentMode = MODE_CHECK;
       Serial.println("Mode: CHECK. Tap your card...");
       lcd_write("CHECK", "SCAN RFID CARD!");
@@ -188,7 +202,7 @@ void handleButtons(){
   lastState_chk = reading_chk;
 }
 
-void setupWifi(){
+void setupWifi() {
   delay(20);
   Serial.print("Connecting to WIFI: ");
   lcd_write("Connecting to WIFI: ");
@@ -196,7 +210,7 @@ void setupWifi(){
   lcd_write(WIFI_SSID);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  while(WiFi.status() != WL_CONNECTED){
+  while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
     lcd_write(".");
@@ -210,32 +224,43 @@ void setupWifi(){
 }
 
 
-void mqtt_callback(char* topic, byte* payload, unsigned int length){
+void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived on topic: ");
   Serial.println(topic);
-  Serial.print("Payload: ");
-  for (unsigned int i = 0; i < length; i++){
-    Serial.print((char)payload[i]);
+
+  if (strcmp(topic, "attendance/server/setRfid") == 0) {
+    Serial.print("Payload: ");
+    String msg;
+    for (unsigned int i = 0; i < length; i++) {
+      msg += (char)payload[i];
+    }
+    Serial.println(msg);
+    Serial.println();
+
+    currentMode = MODE_SET;
+    Serial.println("Mode: SET. Tap your card...");
+    lcd_write("Set", "SCAN RFID CARD!");
   }
-  Serial.println();
 
   // TODO:
 }
 
-void reconnect_mqtt(){
-  while(!client.connected()){
+void reconnect_mqtt() {
+  while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     bool connected;
 
-    if (strlen(MQTT_USERNAME) > 0){
+    if (strlen(MQTT_USERNAME) > 0) {
       connected = client.connect(MQTT_CLIENT_ID, MQTT_USERNAME, MQTT_PASSWORD);
     } else {
       connected = client.connect(MQTT_CLIENT_ID);
     }
 
-    if (connected){
+    if (connected) {
       Serial.println("Connected");
       client.subscribe(topic_sub);
+      client.subscribe("attendance/server/setRfid");
+      Serial.println("Subscribed to Set RFID!");
       client.publish(topic_pub, "rfid_reader online");
     } else {
       Serial.print("failed, rc=");
@@ -247,13 +272,13 @@ void reconnect_mqtt(){
 }
 
 
-void setup_mqtt(){
+void setup_mqtt() {
   client.setServer(MQTT_BROKER_ADRRESS, MQTT_PORT);
   client.setCallback(mqtt_callback);
 }
 
-void loop_mqtt(){
-  if (!client.connected()){
+void loop_mqtt() {
+  if (!client.connected()) {
     reconnect_mqtt();
   }
   client.loop();

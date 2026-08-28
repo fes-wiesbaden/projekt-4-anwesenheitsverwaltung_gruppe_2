@@ -1,7 +1,5 @@
 package com.feswiesbaden.attendencemanagement.service;
 
-import com.feswiesbaden.attendencemanagement.entity.Attendance;
-import com.feswiesbaden.attendencemanagement.entity.Classroom;
 import com.feswiesbaden.attendencemanagement.entity.Rfid_chip;
 import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
 import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
@@ -155,24 +153,21 @@ public class MqttService {
         }
     }
 
-    private CheckResult checkin(String chipId) {
-        if (chipId.isEmpty()) return CheckResult.INVALID;
-        if (!rfidRepository.existsByChipId(chipId)) return CheckResult.INVALID;
+    private void checkin(String chipId) {
+        if (chipId.isEmpty()) return;
+        if (!rfidRepository.existsByChipId(chipId)) return;
 
         System.out.println("Student " + chipId + " checking out");
         // TODO
-        return CheckResult.CHECKED_IN;
     }
 
-    private CheckResult checkout(String chipId) {
+    private void checkout(String chipId) {
         System.out.println("Student " + chipId + " checking out");
         // TODO
-        return CheckResult.CHECKED_OUT;
     }
 
-    private CheckResult check(String chipId) {
+    private void check(String chipId) {
         System.out.println("Student " + chipId + " checking");
         // TODO
-        return CheckResult.CHECKED;
     }
 }
