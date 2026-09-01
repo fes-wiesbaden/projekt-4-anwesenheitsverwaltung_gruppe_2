@@ -1,6 +1,7 @@
 package com.feswiesbaden.attendencemanagement.service;
 
 import com.feswiesbaden.attendencemanagement.entity.Rfid_chip;
+import com.feswiesbaden.attendencemanagement.entity.SaveResult;
 import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
 import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
 import com.feswiesbaden.attendencemanagement.repository.RfidRepository;
@@ -15,13 +16,14 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
 import java.nio.charset.StandardCharsets;
 
+import static org.hibernate.metamodel.mapping.ordering.OrderByFragmentTranslator.check;
+
 @Service
 public class MqttService {
 
     private final RfidRepository rfidRepository;
-    private final AttendanceRepository attendanceRepository;
-    private final StudentRepository studentRepository;
-    private final ClassroomRepository classroomRepository;
+    private final AttendanceService attendanceService;
+    private final CardService cardService;
     private final String brokerUrl;
 
     private static final String CLIENT_ID = MqttClient.generateClientId();
@@ -31,8 +33,6 @@ public class MqttService {
             "attendance/reader/check",
             "attendance/reader/set"
     };
-
-    private enum SaveResult {SAVED, DUPLICATE, INVALID}
 
     private enum CheckResult {CHECKED_IN, CHECKED_OUT, CHECKED, INVALID}
 
@@ -52,11 +52,12 @@ public class MqttService {
             AttendanceRepository attendanceRepository,
             StudentRepository studentRepository,
             ClassroomRepository classroomRepository,
+            AttendanceService attendanceService,
+            CardService cardService,
             @Value("${mqtt.broker.url}") String brokerUrl) {
         this.rfidRepository = rfidRepository;
-        this.attendanceRepository = attendanceRepository;
-        this.classroomRepository = classroomRepository;
-        this.studentRepository = studentRepository;
+        this.attendanceService = attendanceService;
+        this.cardService = cardService;
         this.brokerUrl = brokerUrl;
     }
 
@@ -105,24 +106,25 @@ public class MqttService {
         String chipId = new String(message.getPayload(), StandardCharsets.UTF_8).trim().toLowerCase();
         switch (topic) {
             case "attendance/reader/checkin":
-                checkin(chipId);
+                attendanceService.checkin(chipId);
                 client.publish(TOPIC_CHECK_IN_RESULT, "CHECKED IN".getBytes(StandardCharsets.UTF_8), 2, false);
                 break;
             case "attendance/reader/checkout":
-                checkout(chipId);
+                attendanceService.checkout(chipId);
                 client.publish(TOPIC_CHECK_OUT_RESULT, "CHECKED OUT".getBytes(StandardCharsets.UTF_8), 2, false);
                 break;
             case "attendance/reader/check":
-                check(chipId);
+                attendanceService.check(chipId);
                 client.publish(TOPIC_CHECK_RESULT, "CHECKED".getBytes(StandardCharsets.UTF_8), 2, false);
                 break;
             case "attendance/reader/set":
-                SaveResult saved = saveRfid(chipId);
+                SaveResult saved = cardService.saveRfid(chipId);
 
                 switch (saved) {
                     case DUPLICATE -> client.publish(TOPIC_SET_RESULT,
                             "Chip is already in DB".getBytes(StandardCharsets.UTF_8), 2, false);
-                    case SAVED -> client.publish(TOPIC_SET_RESULT, "Saved".getBytes(StandardCharsets.UTF_8), 2, false);
+                    case SAVED -> client.publish(TOPIC_SET_RESULT,
+                            "Saved".getBytes(StandardCharsets.UTF_8), 2, false);
                     case INVALID -> client.publish(TOPIC_SET_RESULT,
                             "Chip is invalid".getBytes(StandardCharsets.UTF_8), 2, false);
                 }
@@ -136,38 +138,7 @@ public class MqttService {
         client.publish(TOPIC_SET_RFID, new byte[0], 1, false);
     }
 
-    private SaveResult saveRfid(String chipId) throws MqttException {
-        if (chipId.isEmpty()) return SaveResult.INVALID;
-        if (rfidRepository.existsByChipId(chipId)) return SaveResult.DUPLICATE;
 
-        Rfid_chip chip = new Rfid_chip();
-        chip.setChipId(chipId);
 
-        try {
-            rfidRepository.save(chip);
-            System.out.println("Saved " + chipId + " Chip to DB!");
-            return SaveResult.SAVED;
-        } catch (DataIntegrityViolationException e) {
-            System.out.println(chipId + " Chip is already in DB!");
-            return SaveResult.DUPLICATE;
-        }
-    }
 
-    private void checkin(String chipId) {
-        if (chipId.isEmpty()) return;
-        if (!rfidRepository.existsByChipId(chipId)) return;
-
-        System.out.println("Student " + chipId + " checking out");
-        // TODO
-    }
-
-    private void checkout(String chipId) {
-        System.out.println("Student " + chipId + " checking out");
-        // TODO
-    }
-
-    private void check(String chipId) {
-        System.out.println("Student " + chipId + " checking");
-        // TODO
-    }
 }
