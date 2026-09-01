@@ -1,5 +1,6 @@
 package com.feswiesbaden.attendencemanagement.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,6 +22,11 @@ public class Rfid_chip {
 
     private String chipId;
 
+    @JsonIgnore
     @OneToOne(mappedBy = "rfidChip")
     private Student student;
+
+    public UUID getStudentId() {
+        return student != null ? student.getId() : null;
+    }
 }

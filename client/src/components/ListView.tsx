@@ -19,7 +19,6 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import "../css/main.css";
 import { useState } from "react";
-import { TrendingUp } from "@mui/icons-material";
 
 interface ListViewProps {
   onLogout: () => void;

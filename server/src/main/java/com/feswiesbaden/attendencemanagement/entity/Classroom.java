@@ -26,6 +26,8 @@ public class Classroom {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String classroomName;
+
     @ManyToOne
     @JoinColumn(name = "room_id")
     private Room room;

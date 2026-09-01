@@ -48,6 +48,9 @@ function App() {
         <DialogTitle className="info-title">Info</DialogTitle>
         <DialogContent>
           <Typography gutterBottom className="info-content">
+            {
+              // TODO: Info anpassen (benutzen Schüler das auch?)
+            }
             <b className="info-headline">Was ist PresenceCTNRL?</b>
             <br />
             <br />
@@ -59,7 +62,9 @@ function App() {
           </Typography>
           <br />
           <Typography gutterBottom className="info-content">
-            <b className="info-headline">Du hast noch keinen Account oder Probleme beim einloggen?</b>
+            <b className="info-headline">
+              Du hast noch keinen Account oder Probleme beim einloggen?
+            </b>
             <br />
             <br />
             Wende dich an deine/n Klassenlehrer:in oder an die Schulverwaltung,
@@ -67,7 +72,9 @@ function App() {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button className="info-close" onClick={() => setHelpOpen(false)}>Schließen</Button>
+          <Button className="info-close" onClick={() => setHelpOpen(false)}>
+            Schließen
+          </Button>
         </DialogActions>
       </Dialog>
     </>

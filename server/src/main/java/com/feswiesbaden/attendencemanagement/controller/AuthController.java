@@ -47,12 +47,6 @@ public class AuthController {
         return ResponseEntity.ok(new LoginResponseDto(token));
     }
 
-    @PostMapping("/register")
-    public RegisterResponseDto Register(RegisterDto dto) {
-
-        return null;
-    }
-
     @PostMapping("/logout")
     public LogoutResponseDto Logout(LogoutDto dto) {
 
