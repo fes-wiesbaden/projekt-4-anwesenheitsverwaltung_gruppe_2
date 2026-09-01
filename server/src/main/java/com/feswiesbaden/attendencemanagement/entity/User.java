@@ -46,7 +46,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role = USER;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     @OneToOne
     private Classroom myClassroom; //Klassen-Lehrer
 

@@ -38,7 +38,9 @@ public class DataInitializer implements ApplicationRunner {
                     username,
                     passwordEncoder.encode(password),
                     LocalDate.now(),
-                    Role.ADMIN
+                    Role.ADMIN,
+                    null,
+                    null
             );
             userRepository.save(admin);
             log.info("Default admin user created");
