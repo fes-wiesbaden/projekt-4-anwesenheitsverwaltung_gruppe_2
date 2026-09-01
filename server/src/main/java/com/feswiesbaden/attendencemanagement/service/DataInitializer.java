@@ -2,6 +2,7 @@ package com.feswiesbaden.attendencemanagement.service;
 
 import java.time.LocalDate;
 
+import com.feswiesbaden.attendencemanagement.entity.Classroom;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -32,14 +33,15 @@ public class DataInitializer implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (!userRepository.existsByUsername(username)) {
-            User admin = new User(
-                    null,
-                    username,
-                    username,
-                    passwordEncoder.encode(password),
-                    LocalDate.now(),
-                    Role.ADMIN
-            );
+            User admin = new User();
+
+            admin.setDisplayName(username);
+            admin.setUsername(username);
+            admin.setPassword(passwordEncoder.encode(password));
+            admin.setCreatedAt(LocalDate.now());
+            admin.setRole(Role.ADMIN);
+
+
             userRepository.save(admin);
             log.info("Default admin user created");
         }
