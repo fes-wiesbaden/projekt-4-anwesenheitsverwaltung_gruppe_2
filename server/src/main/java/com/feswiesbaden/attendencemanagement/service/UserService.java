@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import com.feswiesbaden.attendencemanagement.entity.Role;
 import com.feswiesbaden.attendencemanagement.entity.User;
 import com.feswiesbaden.attendencemanagement.repository.UserRepository;
-
+import com.feswiesbaden.attendencemanagement.dto.requests.RegisterDto;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -16,11 +16,16 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public User createUser(User user) {
+    public User createUser(RegisterDto registerDto) {
+        User user = new User();
+
+        user.setUsername(registerDto.getUsername());
+        user.setDisplayName(registerDto.getDisplayname());
+        user.setRole(registerDto.getRole());
+
         user.setPassword(
-                passwordEncoder.encode(user.getPassword())
-            );
-        user.setRole(Role.USER);
-            return userRepository.save(user);
+                passwordEncoder.encode(registerDto.getPassword()));
+
+        return userRepository.save(user);
     }
 }
