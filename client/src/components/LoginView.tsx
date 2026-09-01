@@ -18,14 +18,16 @@ function LoginView({ onLoginSuccess }: LoginViewProps) {
     setIsLoading(true);
 
     // TEST LOGIN
+    /*
     if (username == "test" && password == "test") {
       onLoginSuccess();
       setIsLoading(false);
       return;
     }
+*/
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch("http://localhost:4100/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
