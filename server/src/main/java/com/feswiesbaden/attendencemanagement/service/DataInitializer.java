@@ -2,6 +2,7 @@ package com.feswiesbaden.attendencemanagement.service;
 
 import java.time.LocalDate;
 
+import com.feswiesbaden.attendencemanagement.entity.Classroom;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
