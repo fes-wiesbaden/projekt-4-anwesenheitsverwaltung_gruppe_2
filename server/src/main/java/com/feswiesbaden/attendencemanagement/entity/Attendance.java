@@ -28,10 +28,6 @@ public class Attendance {
     private String description;
 
     @ManyToOne
-    @JoinColumn(name = "classroom_id")
-    private Classroom classroom;
-
-    @ManyToOne
     @JoinColumn(name = "student_id")
     private Student student;
 

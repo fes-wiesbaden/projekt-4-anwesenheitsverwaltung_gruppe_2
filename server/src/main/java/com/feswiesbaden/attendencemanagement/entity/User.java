@@ -41,6 +41,8 @@ public class User {
     @Column(nullable=false)
     private String password;
 
+    private boolean firstLogin;
+
     private LocalDate createdAt;
 
     @Enumerated(EnumType.STRING)
@@ -50,7 +52,7 @@ public class User {
     @OneToOne
     private Classroom myClassroom; //Klassen-Lehrer
 
-    @ManyToMany
+    @ManyToMany(mappedBy = "classes")
     private List<Classroom> classes;//Alle Klassen die unterrichtet werden.
 
 }

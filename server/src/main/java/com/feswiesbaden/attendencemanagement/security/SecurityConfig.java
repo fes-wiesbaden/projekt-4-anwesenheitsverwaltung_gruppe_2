@@ -53,9 +53,8 @@ public class SecurityConfig {
                     }
                 }))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/test").permitAll()
+                        .requestMatchers("/api/auth/test", "/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**").permitAll()
                         .anyRequest().authenticated())

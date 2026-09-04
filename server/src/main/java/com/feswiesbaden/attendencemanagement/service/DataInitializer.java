@@ -37,6 +37,7 @@ public class DataInitializer implements ApplicationRunner {
                     username,
                     username,
                     passwordEncoder.encode(password),
+                    false,
                     LocalDate.now(),
                     Role.ADMIN,
                     null,

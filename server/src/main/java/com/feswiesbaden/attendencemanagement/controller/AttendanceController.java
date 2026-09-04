@@ -37,7 +37,7 @@ public class AttendanceController {
     private ClassroomRepository classroomRepository;
 
     @PostMapping("/checkin")
-    public ResponseEntity<CheckinResponseDto> Checkin(@RequestBody CheckinDto dto){
+    public ResponseEntity<CheckinResponseDto> checkin(@RequestBody CheckinDto dto){
         if (dto.username == null || dto.username.isBlank()) return ResponseEntity.badRequest().build();
         if (!studentRepository.existsByUsername(dto.username)) return ResponseEntity.notFound().build();
 

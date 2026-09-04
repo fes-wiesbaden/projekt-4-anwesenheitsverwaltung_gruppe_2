@@ -1,19 +1,21 @@
 package com.feswiesbaden.attendencemanagement.controller;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
-import lombok.RequiredArgsConstructor;
-import com.feswiesbaden.attendencemanagement.entity.User;
-import com.feswiesbaden.attendencemanagement.entity.Classroom;
-import com.feswiesbaden.attendencemanagement.dto.requests.RegisterDto;
-import com.feswiesbaden.attendencemanagement.service.UserService;
-import com.feswiesbaden.attendencemanagement.service.ClassroomService;
 import org.springframework.web.bind.annotation.RequestBody;
-import com.feswiesbaden.attendencemanagement.dto.response.UserResponseDto;
-import com.feswiesbaden.attendencemanagement.service.AdminService;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.feswiesbaden.attendencemanagement.dto.requests.AssignClassDto;
+import com.feswiesbaden.attendencemanagement.dto.requests.RegisterDto;
+import com.feswiesbaden.attendencemanagement.dto.response.UserResponseDto;
+import com.feswiesbaden.attendencemanagement.entity.Classroom;
+import com.feswiesbaden.attendencemanagement.entity.User;
+import com.feswiesbaden.attendencemanagement.service.AdminService;
+import com.feswiesbaden.attendencemanagement.service.ClassroomService;
+import com.feswiesbaden.attendencemanagement.service.UserService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/auth/admin")
@@ -26,7 +28,7 @@ public class AdminController {
 
     @PostMapping("/createUser")
     public ResponseEntity<UserResponseDto> createUser(@RequestBody RegisterDto registerDto) {
-        User user = userService.createUser(registerDto);
+        User user = adminService.createUser(registerDto);
         UserResponseDto response = new UserResponseDto(
                 user.getId(),
                 user.getDisplayName(),

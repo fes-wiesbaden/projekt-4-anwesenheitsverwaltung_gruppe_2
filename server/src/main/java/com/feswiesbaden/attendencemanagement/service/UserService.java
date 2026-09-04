@@ -5,27 +5,19 @@ import org.springframework.stereotype.Service;
 
 import com.feswiesbaden.attendencemanagement.entity.Role;
 import com.feswiesbaden.attendencemanagement.entity.User;
+import com.feswiesbaden.attendencemanagement.entity.Classroom;
+import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
 import com.feswiesbaden.attendencemanagement.repository.UserRepository;
 import com.feswiesbaden.attendencemanagement.dto.requests.RegisterDto;
 import lombok.RequiredArgsConstructor;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final ClassroomRepository classroomRepository;
 
-    public User createUser(RegisterDto registerDto) {
-        User user = new User();
 
-        user.setUsername(registerDto.getUsername());
-        user.setDisplayName(registerDto.getDisplayname());
-        user.setRole(registerDto.getRole());
-
-        user.setPassword(
-                passwordEncoder.encode(registerDto.getPassword()));
-
-        return userRepository.save(user);
-    }
 }
