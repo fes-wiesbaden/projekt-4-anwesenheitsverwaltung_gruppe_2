@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -37,7 +38,7 @@ public class Classroom {
     private List<Student> students;
 
     @ManyToMany
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinTable (name = "classroom_user", joinColumns = @JoinColumn (name = "classroom_id"), inverseJoinColumns = @JoinColumn (name = "user_id"))
+    private List<User> teachers;
 
 }

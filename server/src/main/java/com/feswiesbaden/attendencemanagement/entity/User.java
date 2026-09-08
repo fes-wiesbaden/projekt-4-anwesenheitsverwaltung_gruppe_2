@@ -43,7 +43,7 @@ public class User {
     @JoinColumn()
     private Classroom myClassroom; //Klassen-Lehrer
 
-    @ManyToMany(mappedBy = "classes")
+    @ManyToMany(mappedBy = "teachers")
     private List<Classroom> classes;//Alle Klassen die unterrichtet werden.
 
 }
