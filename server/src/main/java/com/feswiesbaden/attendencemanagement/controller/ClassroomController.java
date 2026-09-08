@@ -6,6 +6,7 @@ import com.feswiesbaden.attendencemanagement.service.ClassroomService;
 
 import lombok.RequiredArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -17,9 +18,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.feswiesbaden.attendencemanagement.entity.Attendance;
+
 @RestController
 @RequestMapping("/api/classroom")
 @RequiredArgsConstructor
+
 public class ClassroomController {
 
     private final ClassroomRepository classroomRepository;
@@ -34,13 +38,18 @@ public class ClassroomController {
         return ResponseEntity.ok("Classroom Created!");
     }
 
-    @GetMapping("/classrooms")
+    @GetMapping("/allClassrooms")
     public ResponseEntity<List<String>> getAllClassrooms(
             Authentication authentication) {
 
         return ResponseEntity.ok(
                 classroomService.getAvailableClassrooms(
                         authentication.getName()));
+    }
+
+    @GetMapping 
+    public ResponseEntity<List<Attendance>> getAttendances(String Classname, LocalDateTime date){
+        
     }
 
 }

@@ -1,6 +1,16 @@
 package com.feswiesbaden.attendencemanagement.controller;
 
-import aj.org.objectweb.asm.ClassReader;
+import java.sql.Date;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.feswiesbaden.attendencemanagement.dto.requests.CheckinDto;
 import com.feswiesbaden.attendencemanagement.dto.response.CheckinResponseDto;
 import com.feswiesbaden.attendencemanagement.entity.Attendance;
@@ -11,14 +21,6 @@ import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
 import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
 import com.feswiesbaden.attendencemanagement.repository.StudentRepository;
 import com.feswiesbaden.attendencemanagement.service.AttendanceService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.sql.Date;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/attendance")
