@@ -1,17 +1,23 @@
 package com.feswiesbaden.attendencemanagement.service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.feswiesbaden.attendencemanagement.entity.Attendance;
 import com.feswiesbaden.attendencemanagement.entity.Classroom;
-import lombok.RequiredArgsConstructor;
+import com.feswiesbaden.attendencemanagement.exceptions.ClassroomNotFoundException;
+import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
 import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class ClassroomService {
     private final ClassroomRepository classroomRepository;
+    private final AttendanceRepository attendanceRepository;
 
     public Classroom findById(Long id) {
         return classroomRepository.findById(id)
@@ -20,5 +26,13 @@ public class ClassroomService {
 
     public List<String> getAvailableClassrooms(String username) {
         return classroomRepository.findClassroomNamesByTeacherUsername(username);
+    }
+
+    public List<Attendance> getAttendances(String className, LocalDate date) {
+        Classroom classroom = classroomRepository.findByClassroomName(className)
+                .orElseThrow(() -> new ClassroomNotFoundException(className));
+
+        return attendanceRepository.findByStudent_ClassroomAndCheckinBetween(
+                classroom, date.atStartOfDay(), date.atTime(23, 59, 59));
     }
 }

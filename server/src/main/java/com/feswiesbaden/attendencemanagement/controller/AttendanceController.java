@@ -1,8 +1,7 @@
 package com.feswiesbaden.attendencemanagement.controller;
 
-import java.sql.Date;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,12 +14,9 @@ import com.feswiesbaden.attendencemanagement.dto.requests.CheckinDto;
 import com.feswiesbaden.attendencemanagement.dto.response.CheckinResponseDto;
 import com.feswiesbaden.attendencemanagement.entity.Attendance;
 import com.feswiesbaden.attendencemanagement.entity.Attendance_status;
-import com.feswiesbaden.attendencemanagement.entity.Classroom;
 import com.feswiesbaden.attendencemanagement.entity.Student;
 import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
-import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
 import com.feswiesbaden.attendencemanagement.repository.StudentRepository;
-import com.feswiesbaden.attendencemanagement.service.AttendanceService;
 
 @RestController
 @RequestMapping("/api/attendance")
@@ -32,11 +28,6 @@ public class AttendanceController {
     @Autowired
     private AttendanceRepository attendanceRepository;
 
-    @Autowired
-    private AttendanceService attendanceService;
-
-    @Autowired
-    private ClassroomRepository classroomRepository;
 
     @PostMapping("/checkin")
     public ResponseEntity<CheckinResponseDto> checkin(@RequestBody CheckinDto dto){
@@ -44,11 +35,9 @@ public class AttendanceController {
         if (!studentRepository.existsByUsername(dto.username)) return ResponseEntity.notFound().build();
 
         LocalDateTime checkinTime = LocalDateTime.now();
-        Date date = Date.valueOf(checkinTime.toLocalDate());
+       LocalDate date = checkinTime.toLocalDate();
 
         Student student = studentRepository.findByUsername(dto.username);
-
-        List<Classroom> classroom = classroomRepository.findAll();
 
         Attendance attendance = new Attendance();
         attendance.setCheckin(checkinTime);

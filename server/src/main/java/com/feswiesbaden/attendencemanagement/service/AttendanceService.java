@@ -1,10 +1,9 @@
 package com.feswiesbaden.attendencemanagement.service;
 
-import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
-import com.feswiesbaden.attendencemanagement.repository.RfidRepository;
-import com.feswiesbaden.attendencemanagement.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.feswiesbaden.attendencemanagement.repository.RfidRepository;
 
 @Service
 public class AttendanceService {
@@ -12,11 +11,6 @@ public class AttendanceService {
     @Autowired
     private RfidRepository rfidRepository;
 
-    @Autowired
-    private StudentRepository studentRepository;
-
-    @Autowired
-    private AttendanceRepository attendanceRepository;
 
     void checkin(String chipId) {
         if (chipId.isEmpty()) return;

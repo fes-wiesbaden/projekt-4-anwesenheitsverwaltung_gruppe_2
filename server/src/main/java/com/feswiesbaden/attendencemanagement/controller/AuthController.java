@@ -12,11 +12,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.feswiesbaden.attendencemanagement.dto.requests.ChangePasswordDto;
 import com.feswiesbaden.attendencemanagement.dto.requests.LoginDto;
 import com.feswiesbaden.attendencemanagement.dto.requests.LogoutDto;
-import com.feswiesbaden.attendencemanagement.dto.requests.RegisterDto;
 import com.feswiesbaden.attendencemanagement.dto.response.ChangePasswordResponseDto;
 import com.feswiesbaden.attendencemanagement.dto.response.LoginResponseDto;
 import com.feswiesbaden.attendencemanagement.dto.response.LogoutResponseDto;
-import com.feswiesbaden.attendencemanagement.dto.response.RegisterResponseDto;
 import com.feswiesbaden.attendencemanagement.jwt.JwtUtil;
 
 import lombok.RequiredArgsConstructor;

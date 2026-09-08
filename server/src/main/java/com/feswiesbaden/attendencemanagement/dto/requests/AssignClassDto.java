@@ -1,7 +1,5 @@
 package com.feswiesbaden.attendencemanagement.dto.requests;
 
-import com.feswiesbaden.attendencemanagement.entity.Classroom;
-
 import lombok.Getter;
 
 @Getter
