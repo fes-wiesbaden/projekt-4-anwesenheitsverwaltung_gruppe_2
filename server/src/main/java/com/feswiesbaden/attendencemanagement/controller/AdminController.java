@@ -24,7 +24,6 @@ import com.feswiesbaden.attendencemanagement.entity.User;
 import com.feswiesbaden.attendencemanagement.repository.StudentRepository;
 import com.feswiesbaden.attendencemanagement.service.AdminService;
 import com.feswiesbaden.attendencemanagement.service.ClassroomService;
-import com.feswiesbaden.attendencemanagement.service.UserService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +33,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminController {
 
-    private final UserService userService;
     private final StudentRepository studentRepository;
     private final AdminService adminService;
     private final ClassroomService classroomService;
