@@ -1,8 +1,9 @@
 package com.feswiesbaden.attendencemanagement.dto.requests;
 
 import lombok.Getter;
+import lombok.Setter;
 
-@Getter 
+@Getter @Setter 
 public class ChangePasswordDto {
     private String oldPassword;
     private String newPassword;
