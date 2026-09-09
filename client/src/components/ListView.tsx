@@ -18,7 +18,7 @@ import {
 } from "@mui/x-data-grid";
 import EditIcon from "@mui/icons-material/Edit";
 import "../css/main.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ListViewProps {
   onLogout: () => void;
@@ -36,12 +36,49 @@ function ListView({ onLogout }: ListViewProps) {
     { id: "class4", label: "Klasse 4" },
   ];
 
+  const getClasses = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:4100/api/classroom/allClassrooms",
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("Server error:", response.status, errorBody);
+        throw new Error(
+          "Klassenräume konnten nicht vom Server abgerufen werden.",
+        );
+      }
+      const data = await response.json();
+      localStorage.setItem("token", data.token);
+      console.log(data);
+      return data.classes;
+    } catch {
+      // TODO: catch Klassenräume Error
+    }
+  };
+
   const [isEditing, setIsEditing] = useState(false);
   const [selectedClass, setSelectedClass] = useState("");
   const [exportFormat, setExportFormat] = useState("");
   const [classes, setClasses] = useState(DUMMY_CLASSES);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+
+  useEffect(() => {
+    const loadClasses = async () => {
+      const data = await getClasses();
+      if (data) {
+        setClasses(data);
+      }
+    };
+    loadClasses();
+  }, []);
 
   const columns: GridColDef<(typeof rows)[number]>[] = [
     { field: "id", headerName: "ID", width: 90 },

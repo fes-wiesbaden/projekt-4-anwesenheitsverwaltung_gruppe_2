@@ -17,15 +17,6 @@ function LoginView({ onLoginSuccess }: LoginViewProps) {
     setError(null);
     setIsLoading(true);
 
-    // TEST LOGIN
-    /*
-    if (username == "test" && password == "test") {
-      onLoginSuccess();
-      setIsLoading(false);
-      return;
-    }
-*/
-
     try {
       const response = await fetch("http://localhost:4100/api/auth/login", {
         method: "POST",

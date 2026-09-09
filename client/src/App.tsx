@@ -25,9 +25,9 @@ function App() {
   return (
     <>
       <div className="title">
-        <h1>PresenceCNTRL</h1>
+        <h1>AttendanceCTRL</h1>
         <IconButton
-          aria-label="Hilfe"
+          aria-label="Info"
           onClick={() => setHelpOpen(true)}
           size="small"
         >
@@ -51,14 +51,14 @@ function App() {
             {
               // TODO: Info anpassen (benutzen Schüler das auch?)
             }
-            <b className="info-headline">Was ist PresenceCTNRL?</b>
+            <b className="info-headline">Was ist AttendanceCNTRL?</b>
             <br />
             <br />
-            PresenceCNTRL hilft Lehrkräften und Schüler:innen zuverlässig und
-            einfach ihre An- und Abwesenheiten zu verfolgen. Hierbei ersetzt
-            PresenceCNTRL die altmodische papierbasierte Lösung und glänzt dabei
-            mit einfacher Bedienung, niedriger Fehleranfälligkeit und
-            übersichtlicher Darstellung.
+            AttendanceCNTRL hilft Lehrkräften zuverlässig und einfach die 
+            An- und Abwesenheiten der Schüler zu verfolgen. und zu verwalten
+            Hierbei ersetzt AttendanceCNTRL die altmodische papierbasierte 
+            Lösung und glänzt dabei mit einfacher Bedienung, niedriger 
+            Fehleranfälligkeit und übersichtlicher Darstellung.
           </Typography>
           <br />
           <Typography gutterBottom className="info-content">
@@ -67,7 +67,7 @@ function App() {
             </b>
             <br />
             <br />
-            Wende dich an deine/n Klassenlehrer:in oder an die Schulverwaltung,
+            Wenden Sie sich an einen Administrator oder an die Schulverwaltung,
             um Zugangsdaten zu erhalten.
           </Typography>
         </DialogContent>
