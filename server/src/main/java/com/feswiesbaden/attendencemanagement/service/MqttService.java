@@ -1,6 +1,8 @@
 package com.feswiesbaden.attendencemanagement.service;
 
-import com.feswiesbaden.attendencemanagement.entity.Rfid_chip;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.feswiesbaden.attendencemanagement.entity.SaveResult;
 import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
 import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
@@ -15,8 +17,8 @@ import org.springframework.stereotype.Service;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
 import java.nio.charset.StandardCharsets;
-
-import static org.hibernate.metamodel.mapping.ordering.OrderByFragmentTranslator.check;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Service
 public class MqttService {
@@ -24,25 +26,22 @@ public class MqttService {
     private final RfidRepository rfidRepository;
     private final AttendanceService attendanceService;
     private final CardService cardService;
+    private final SetRfidService setRfidService;
     private final String brokerUrl;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String CLIENT_ID = MqttClient.generateClientId();
     private final String[] topics = new String[]{
-            "attendance/reader/checkin",
-            "attendance/reader/checkout",
-            "attendance/reader/check",
+            "attendance/reader/scan",
             "attendance/reader/set"
     };
-
-    private enum CheckResult {CHECKED_IN, CHECKED_OUT, CHECKED, INVALID}
 
     private static final String TOPIC_SET_RFID = "attendance/server/setRfid";
     private static final String TOPIC_SET_RESULT = "attendance/server/setResult";
     private static final String TOPIC_STATUS = "attendance/server/status";
 
-    private static final String TOPIC_CHECK_IN_RESULT = "attendance/server/checkin";
-    private static final String TOPIC_CHECK_OUT_RESULT = "attendance/server/checkout";
-    private static final String TOPIC_CHECK_RESULT = "attendance/server/check";
+    private static final String TOPIC_SCAN_RESULT = "attendance/server/scanResult";
 
     MqttClient client;
 
@@ -54,10 +53,12 @@ public class MqttService {
             ClassroomRepository classroomRepository,
             AttendanceService attendanceService,
             CardService cardService,
+            SetRfidService setRfidService,
             @Value("${mqtt.broker.url}") String brokerUrl) {
         this.rfidRepository = rfidRepository;
         this.attendanceService = attendanceService;
         this.cardService = cardService;
+        this.setRfidService = setRfidService;
         this.brokerUrl = brokerUrl;
     }
 
@@ -95,7 +96,7 @@ public class MqttService {
 
         client.connect(options);
 //       client.subscribe("#", 1);
-        client.subscribe(topics, new int[]{1, 1, 1, 1});
+        client.subscribe(topics, new int[]{1, 1});
 
         // inform mqtt
         client.publish(TOPIC_STATUS, "Server is online!".getBytes(StandardCharsets.UTF_8),
@@ -103,39 +104,73 @@ public class MqttService {
     }
 
     public void handleMqttMessages(String topic, MqttMessage message) throws MqttException {
-        String chipId = new String(message.getPayload(), StandardCharsets.UTF_8).trim().toLowerCase();
+        String payload = new String(message.getPayload(), StandardCharsets.UTF_8).trim();
         switch (topic) {
-            case "attendance/reader/checkin":
-                attendanceService.checkin(chipId);
-                client.publish(TOPIC_CHECK_IN_RESULT, "CHECKED IN".getBytes(StandardCharsets.UTF_8), 2, false);
-                break;
-            case "attendance/reader/checkout":
-                attendanceService.checkout(chipId);
-                client.publish(TOPIC_CHECK_OUT_RESULT, "CHECKED OUT".getBytes(StandardCharsets.UTF_8), 2, false);
-                break;
-            case "attendance/reader/check":
-                attendanceService.check(chipId);
-                client.publish(TOPIC_CHECK_RESULT, "CHECKED".getBytes(StandardCharsets.UTF_8), 2, false);
+            case "attendance/reader/scan":
+                handleScan(payload);
                 break;
             case "attendance/reader/set":
-                SaveResult saved = cardService.saveRfid(chipId);
-
-                switch (saved) {
-                    case DUPLICATE -> client.publish(TOPIC_SET_RESULT,
-                            "Chip is already in DB".getBytes(StandardCharsets.UTF_8), 2, false);
-                    case SAVED -> client.publish(TOPIC_SET_RESULT,
-                            "Saved".getBytes(StandardCharsets.UTF_8), 2, false);
-                    case INVALID -> client.publish(TOPIC_SET_RESULT,
-                            "Chip is invalid".getBytes(StandardCharsets.UTF_8), 2, false);
-                }
+                handleSetRfid(payload);
                 break;
             default:
                 break;
         }
     }
 
-    public void setRfid() throws MqttException {
-        client.publish(TOPIC_SET_RFID, new byte[0], 1, false);
+    private void handleScan(String payload) {
+        String chipId = payload.toLowerCase();
+        AttendanceService.ScanResult result = attendanceService.handleScan(chipId);
+
+        try {
+            Map<String, String> json = new LinkedHashMap<>();
+            json.put("uid", chipId);
+            json.put("status", result.status());
+            if (result.time() != null) {
+                json.put("time", result.time());
+            }
+            client.publish(TOPIC_SCAN_RESULT,
+                    objectMapper.writeValueAsString(json).getBytes(StandardCharsets.UTF_8), 2, false);
+        } catch (Exception e) {
+            System.err.println("Failed to publish scan result: " + e.getMessage());
+        }
+    }
+
+    private void handleSetRfid(String payload) throws MqttException {
+        String requestId = "";
+        String chipId = payload;
+
+        try {
+            JsonNode node = objectMapper.readTree(payload);
+            if (node.isObject()) {
+                requestId = node.path("requestId").asText("");
+                chipId = node.path("uid").asText(payload);
+            }
+        } catch (Exception e) {
+            System.err.println("Invalid set payload: " + e.getMessage());
+        }
+
+        chipId = chipId.trim().toLowerCase();
+        SaveResult saved = cardService.saveRfid(chipId);
+        String status = saved.name();
+
+        if (!requestId.isEmpty()) {
+            setRfidService.completeSet(requestId, status);
+        }
+
+        try {
+            String result = objectMapper.writeValueAsString(Map.of(
+                    "requestId", requestId,
+                    "uid", chipId,
+                    "status", status));
+            client.publish(TOPIC_SET_RESULT, result.getBytes(StandardCharsets.UTF_8), 2, false);
+        } catch (Exception e) {
+            System.err.println("Failed to publish set result: " + e.getMessage());
+        }
+    }
+
+    public void setRfid(String requestId) throws MqttException, JsonProcessingException {
+        String payload = objectMapper.writeValueAsString(Map.of("requestId", requestId));
+        client.publish(TOPIC_SET_RFID, payload.getBytes(StandardCharsets.UTF_8), 1, false);
     }
 
 

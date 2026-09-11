@@ -2,11 +2,14 @@ package com.feswiesbaden.attendencemanagement.controller;
 
 import com.feswiesbaden.attendencemanagement.dto.requests.AssignRfidDto;
 import com.feswiesbaden.attendencemanagement.dto.response.AssignRfidResponseDto;
+import com.feswiesbaden.attendencemanagement.dto.response.SetRfidResponseDto;
 import com.feswiesbaden.attendencemanagement.entity.Rfid_chip;
 import com.feswiesbaden.attendencemanagement.entity.Student;
 import com.feswiesbaden.attendencemanagement.repository.RfidRepository;
 import com.feswiesbaden.attendencemanagement.repository.StudentRepository;
 import com.feswiesbaden.attendencemanagement.service.MqttService;
+import com.feswiesbaden.attendencemanagement.service.SetRfidService;
+import lombok.RequiredArgsConstructor;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -19,22 +22,33 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/rfid")
+@RequiredArgsConstructor
 public class CardController {
 
-    @Autowired
-    private MqttService mqttService;
+    private final MqttService mqttService;
 
-    @Autowired
-    private StudentRepository studentRepository;
+    private final SetRfidService setRfidService;
 
-    @Autowired
-    private RfidRepository rfidRepository;
+    private final StudentRepository studentRepository;
 
-    @GetMapping("/set")
-    public String SetRfid() throws MqttException {
-        mqttService.setRfid();
-        return "Set RFID";
+    private final RfidRepository rfidRepository;
+
+    @PostMapping("/set")
+    public ResponseEntity<SetRfidResponseDto> SetRfid() {
+        String requestId = setRfidService.startSet();
+        try {
+            mqttService.setRfid(requestId);
+        } catch (Exception e) {
+            setRfidService.cancelSet(requestId);
+            return ResponseEntity.status(503).body(new SetRfidResponseDto(requestId, "FAILED"));
+        }
+        return ResponseEntity.accepted().body(new SetRfidResponseDto(requestId, "PENDING"));
     }
+
+//    @GetMapping("/set/status/{requestId}")
+//    public ResponseEntity<SetRfidResponseDto> SetRfidStatus(@PathVariable String requestId) {
+//
+//    }
 
     @GetMapping("/getall")
     public ResponseEntity<List<Rfid_chip>> GetAll() {
