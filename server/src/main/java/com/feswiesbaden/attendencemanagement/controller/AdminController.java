@@ -49,11 +49,27 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping
+    @PostMapping("/assign-class")
     public ResponseEntity<UserResponseDto> assignClass(@RequestBody AssignClassDto assignClassDto) {
         User user = adminService.findUserByUsername(assignClassDto.getUsername());
         Classroom classroom = classroomService.findById(assignClassDto.getClassroomId());
         user = adminService.addClassroom(user, classroom);
+
+        UserResponseDto response = new UserResponseDto(
+                user.getId(),
+                user.getDisplayName(),
+                user.getUsername(),
+                user.getCreatedAt(),
+                user.getRole());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/assignMyClassroom")
+    public ResponseEntity<UserResponseDto> assignMyClassroom(@RequestBody AssignClassDto assignClassDto) {
+        User user = adminService.findUserByUsername(assignClassDto.getUsername());
+        Classroom classroom = classroomService.findById(assignClassDto.getClassroomId());
+        user = adminService.assignMyClassroom(user, classroom);
 
         UserResponseDto response = new UserResponseDto(
                 user.getId(),
