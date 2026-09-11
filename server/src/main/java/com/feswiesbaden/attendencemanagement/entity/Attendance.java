@@ -12,7 +12,7 @@ import java.util.Date;
 @NoArgsConstructor
 @Setter
 @Getter
-@Table(name = "attendances")
+@Table(name = "attendances", uniqueConstraints = @UniqueConstraint(columnNames = {"student_id", "date"}))
 public class Attendance {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

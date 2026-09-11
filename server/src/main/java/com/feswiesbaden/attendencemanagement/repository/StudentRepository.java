@@ -20,6 +20,8 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
     boolean existsById(@NonNull UUID id);
 
     Optional<Student> findByRfidChipId(UUID rfidChipId);
+    List<Student> findByClassroom_Id(Long id);
+    Student findByRfidChip_Id(UUID rfidChip_id);
 
     @Query("""
                 SELECT s

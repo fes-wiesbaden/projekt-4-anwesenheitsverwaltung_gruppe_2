@@ -19,6 +19,6 @@ public class Room {
 
     private String roomNumber;
 
-    @OneToMany
+    @OneToMany(mappedBy = "room")
     private List<Classroom> classrooms;
 }
