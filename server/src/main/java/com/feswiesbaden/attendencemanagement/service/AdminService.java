@@ -1,13 +1,12 @@
 package com.feswiesbaden.attendencemanagement.service;
 
-import java.util.List;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.feswiesbaden.attendencemanagement.dto.requests.RegisterDto;
 import com.feswiesbaden.attendencemanagement.entity.Classroom;
 import com.feswiesbaden.attendencemanagement.entity.User;
+import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
 import com.feswiesbaden.attendencemanagement.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -17,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 public class AdminService {
 
     private final UserRepository userRepository;
+    private final ClassroomRepository classroomRepository;
     private final PasswordEncoder passwordEncoder;
 
     public User findUserByUsername(String username) {
@@ -30,13 +30,18 @@ public class AdminService {
     }
 
     public User addClassroom(User user, Classroom classroom) {
-        List<Classroom> classrooms = user.getClasses();
-        if (!classrooms.contains(classroom)) {
-            classrooms.add(classroom);
-            user.setClasses(classrooms);
+        boolean alreadyTeacher = classroom.getTeachers().stream()
+                .anyMatch(t -> t.getId().equals(user.getId()));
+        if (!alreadyTeacher) {
+            classroom.getTeachers().add(user);
+            classroomRepository.save(classroom);
         }
         return userRepository.save(user);
+    }
 
+    public User assignMyClassroom(User user, Classroom classroom) {
+        user.setMyClassroom(classroom);
+        return userRepository.save(user);
     }
 
     public User createUser(RegisterDto registerDto) {
