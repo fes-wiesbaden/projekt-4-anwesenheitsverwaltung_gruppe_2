@@ -9,10 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.feswiesbaden.attendencemanagement.dto.requests.ChangePasswordDto;
 import com.feswiesbaden.attendencemanagement.dto.requests.LoginDto;
-import com.feswiesbaden.attendencemanagement.dto.requests.LogoutDto;
-import com.feswiesbaden.attendencemanagement.dto.response.ChangePasswordResponseDto;
 import com.feswiesbaden.attendencemanagement.dto.response.LoginResponseDto;
 import com.feswiesbaden.attendencemanagement.dto.response.LogoutResponseDto;
 import com.feswiesbaden.attendencemanagement.jwt.JwtUtil;
@@ -46,20 +43,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public LogoutResponseDto Logout(LogoutDto dto) {
-
-        return null;
-    }
-
-    @PostMapping("change-password")
-    public ChangePasswordResponseDto ChangePassword(ChangePasswordDto dto) {
-
-        return null;
-    }
-
-    @PostMapping("/refresh-token")
-    public String RefreshToken(String token) {
-
-        return null;
+    public ResponseEntity<LogoutResponseDto> logout() {
+        LogoutResponseDto response = new LogoutResponseDto();
+        response.LoggedOut = true;
+        return ResponseEntity.ok(response);
     }
 }
