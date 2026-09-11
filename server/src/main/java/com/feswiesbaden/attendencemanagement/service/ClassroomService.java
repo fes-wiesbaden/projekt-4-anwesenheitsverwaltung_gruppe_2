@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 
 import com.feswiesbaden.attendencemanagement.entity.Attendance;
 import com.feswiesbaden.attendencemanagement.entity.Classroom;
+import com.feswiesbaden.attendencemanagement.entity.Role;
+import com.feswiesbaden.attendencemanagement.entity.User;
 import com.feswiesbaden.attendencemanagement.exceptions.ClassroomNotFoundException;
 import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
 import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
@@ -26,6 +28,16 @@ public class ClassroomService {
 
     public List<String> getAvailableClassrooms(String username) {
         return classroomRepository.findClassroomNamesByTeacherUsername(username);
+    }
+
+    public boolean isOwner(User user, Classroom classroom) {
+        return user.getMyClassroom() != null
+                && user.getMyClassroom().getId().equals(classroom.getId());
+    }
+
+    public boolean hasAccess(User user, Classroom classroom) {
+        return user.getRole() == Role.ADMIN || isOwner(user, classroom)
+                || classroom.getTeachers().stream().anyMatch(t -> t.getId().equals(user.getId()));
     }
 
     public List<Attendance> getAttendances(String className, LocalDate date) {
