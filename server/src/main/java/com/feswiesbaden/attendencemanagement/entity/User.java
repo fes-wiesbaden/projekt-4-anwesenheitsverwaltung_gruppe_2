@@ -40,7 +40,7 @@ public class User {
     private Role role = USER;
 
     @OneToOne
-    @JoinColumn()
+    @JoinColumn(name = "classroom_id", unique = true)
     private Classroom myClassroom; //Klassen-Lehrer
 
     @ManyToMany(mappedBy = "teachers")

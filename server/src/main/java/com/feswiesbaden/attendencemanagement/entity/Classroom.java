@@ -34,7 +34,7 @@ public class Classroom {
     @JoinColumn(name = "room_id")
     private Room room;
 
-    @OneToMany
+    @OneToMany(mappedBy = "classroom")
     private List<Student> students;
 
     @ManyToMany
