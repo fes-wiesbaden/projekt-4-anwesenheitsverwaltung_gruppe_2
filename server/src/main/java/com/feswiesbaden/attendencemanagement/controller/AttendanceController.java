@@ -1,53 +1,81 @@
 package com.feswiesbaden.attendencemanagement.controller;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
-import com.feswiesbaden.attendencemanagement.dto.requests.CheckinDto;
 import com.feswiesbaden.attendencemanagement.dto.response.CheckinResponseDto;
 import com.feswiesbaden.attendencemanagement.entity.Attendance;
-import com.feswiesbaden.attendencemanagement.entity.Attendance_status;
+import com.feswiesbaden.attendencemanagement.entity.Classroom;
 import com.feswiesbaden.attendencemanagement.entity.Student;
+import com.feswiesbaden.attendencemanagement.entity.User;
 import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
+import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
 import com.feswiesbaden.attendencemanagement.repository.StudentRepository;
+import com.feswiesbaden.attendencemanagement.repository.UserRepository;
+import com.feswiesbaden.attendencemanagement.service.AttendanceService;
+import com.feswiesbaden.attendencemanagement.service.ClassroomService;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/attendance")
+@RequiredArgsConstructor
 public class AttendanceController {
 
-    @Autowired
-    private StudentRepository studentRepository;
+    private final AttendanceService attendanceService;
 
-    @Autowired
-    private AttendanceRepository attendanceRepository;
+    private final StudentRepository studentRepository;
 
+    private final AttendanceRepository attendanceRepository;
 
-    @PostMapping("/checkin")
-    public ResponseEntity<CheckinResponseDto> checkin(@RequestBody CheckinDto dto){
-        if (dto.username == null || dto.username.isBlank()) return ResponseEntity.badRequest().build();
-        if (!studentRepository.existsByUsername(dto.username)) return ResponseEntity.notFound().build();
+    private final ClassroomRepository classroomRepository;
 
-        LocalDateTime checkinTime = LocalDateTime.now();
-       LocalDate date = checkinTime.toLocalDate();
+    private final UserRepository userRepository;
 
-        Student student = studentRepository.findByUsername(dto.username);
+    private final ClassroomService classroomService;
 
-        Attendance attendance = new Attendance();
-        attendance.setCheckin(checkinTime);
-        attendance.setDate(date);
-        attendance.setStatus(Attendance_status.ANWESEND);
-        attendance.setStudent(student);
+    @PostMapping("/checkin/{studentId}")
+    public ResponseEntity<CheckinResponseDto> Checkin(@PathVariable UUID studentId){
+        if (!studentRepository.existsById(studentId)) return ResponseEntity.notFound().build();
 
-        attendanceRepository.save(attendance);
-        System.out.println("Attendance Saved");
-
+        // check in
+        attendanceService.checkin(studentId);
         return ResponseEntity.ok(new CheckinResponseDto());
+    }
+
+    @PostMapping("/student/{id}")
+    public ResponseEntity<List<Attendance>> GetAllByStudentId(@PathVariable UUID id){
+        // check if the student exist
+        if (!studentRepository.existsById(id)) return ResponseEntity.badRequest().build();
+
+        // get student and return attendance back
+        Student student = studentRepository.findById(id).orElseThrow();
+        return ResponseEntity.ok(student.getAttendances());
+    }
+
+    @PostMapping("/class/{classroomId}/checkout")
+    public ResponseEntity<String> CheckoutClass(@PathVariable Long classroomId,
+            Authentication authentication,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        User user = userRepository.findByUsername(authentication.getName());
+        if (user == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        Optional<Classroom> classroomOpt = classroomRepository.findById(classroomId);
+        if (classroomOpt.isEmpty()) return ResponseEntity.notFound().build();
+
+        if (!classroomService.hasAccess(user, classroomOpt.get())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        LocalDate targetDate = date != null ? date : LocalDate.now();
+        int checkedOut = attendanceService.checkoutClass(classroomId, targetDate);
+        return ResponseEntity.ok("Checked out " + checkedOut + " students for " + targetDate);
     }
 }
