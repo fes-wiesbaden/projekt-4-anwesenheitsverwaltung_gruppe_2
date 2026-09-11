@@ -29,20 +29,18 @@ function ListView({ onLogout }: ListViewProps) {
   // TODO: mit echtem Fetch vom Backend (API-Call) ersetzen
   const rows = [{ id: 1, lastName: "Snow", firstName: "Jon" }];
 
-  const DUMMY_CLASSES = [
-    { id: "class1", label: "Klasse 1" },
-    { id: "class2", label: "Klasse 2" },
-    { id: "class3", label: "Klasse 3" },
-    { id: "class4", label: "Klasse 4" },
-  ];
+  const DUMMY_CLASSES: string[] = ["Klasse 1", "Klasse 2", "Klasse 3"];
 
-  const getClasses = async () => {
+  const getClasses = async (): Promise<string[] | undefined> => {
     try {
       const response = await fetch(
         "http://localhost:4100/api/classroom/allClassrooms",
         {
           method: "GET",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
           credentials: "include",
         },
       );
@@ -54,25 +52,32 @@ function ListView({ onLogout }: ListViewProps) {
           "Klassenräume konnten nicht vom Server abgerufen werden.",
         );
       }
-      const data = await response.json();
+
+      const data: { token: string; classes: string[] } = await response.json();
       localStorage.setItem("token", data.token);
-      console.log(data);
       return data.classes;
-    } catch {
-      // TODO: catch Klassenräume Error
+    } catch (err) {
+      console.error(err);
+      return undefined;
     }
   };
 
   const [isEditing, setIsEditing] = useState(false);
   const [selectedClass, setSelectedClass] = useState("");
   const [exportFormat, setExportFormat] = useState("");
-  const [classes, setClasses] = useState(DUMMY_CLASSES);
+  const [classes, setClasses] = useState<string[]>(DUMMY_CLASSES);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
+  // TODO: TEST mit Daten in der Datenbank -> funktioniert?
   useEffect(() => {
     const loadClasses = async () => {
       const data = await getClasses();
+      console.log(
+        "Fetched classes:",
+        data,
+        Array.isArray(data) ? typeof data[0] : "no data",
+      );
       if (data) {
         setClasses(data);
       }
@@ -151,8 +156,8 @@ function ListView({ onLogout }: ListViewProps) {
             onChange={(e) => setSelectedClass(e.target.value)}
           >
             {classes.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.label}
+              <MenuItem key={c} value={c}>
+                {c}
               </MenuItem>
             ))}
           </Select>
