@@ -1,7 +1,7 @@
 package com.feswiesbaden.attendencemanagement.security;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.jspecify.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -10,6 +10,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -24,8 +25,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -37,15 +38,15 @@ public class SecurityConfig {
     private final IPBlockListFilter blockListFilter;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(new CorsConfigurationSource() {
                     @Override
-                    public @Nullable CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
+                    public @NonNull CorsConfiguration getCorsConfiguration(@NonNull HttpServletRequest request) {
                         CorsConfiguration corsConfiguration = new CorsConfiguration();
                         corsConfiguration.setAllowCredentials(true);
-                        corsConfiguration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+                        corsConfiguration.setAllowedOrigins(List.of("http://localhost:5173"));
                         corsConfiguration.setAllowedMethods(Collections.singletonList("*"));
                         corsConfiguration.setAllowedHeaders(Collections.singletonList("*"));
                         corsConfiguration.setMaxAge(Duration.ofMinutes(5L));
@@ -55,10 +56,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/test", "/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/student/**").permitAll()
                         .requestMatchers("/api/rfid/**").permitAll()
-                        .requestMatchers("/api/classroom/**").permitAll()
+                        .requestMatchers("/api/classroom/**").authenticated()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**").permitAll()
                         .anyRequest().authenticated())
@@ -77,7 +77,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) {
         return config.getAuthenticationManager();
     }
 
