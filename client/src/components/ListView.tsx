@@ -34,7 +34,7 @@ function ListView({ onLogout }: ListViewProps) {
   const getClasses = async (): Promise<string[] | undefined> => {
     try {
       const response = await fetch(
-        "http://localhost:4100/api/classroom/allClassrooms",
+        "/api/classroom/allClassrooms",
         {
           method: "GET",
           headers: {
@@ -122,7 +122,7 @@ function ListView({ onLogout }: ListViewProps) {
       type: "actions",
       headerName: "",
       width: 60,
-      getActions: (params) => [
+      getActions: () => [
         <GridActionsCellItem
           icon={<EditIcon />}
           label="Bearbeiten"

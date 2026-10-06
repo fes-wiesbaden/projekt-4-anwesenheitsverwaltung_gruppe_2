@@ -14,7 +14,9 @@ import {
 } from "@mui/material";
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    () => Boolean(localStorage.getItem("token")),
+    );
   const [helpOpen, setHelpOpen] = useState(false);
 
   const handleLogout = () => {
