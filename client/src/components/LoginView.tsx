@@ -20,16 +20,22 @@ function LoginView({ onLoginSuccess }: LoginViewProps) {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         credentials: "include",
-        body: JSON.stringify({ username, password }),
-    });
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error("Login fehlgeschlagen");
       }
 
       const data = await response.json();
+
       localStorage.setItem("token", data.token);
 
       onLoginSuccess();
@@ -41,33 +47,54 @@ function LoginView({ onLoginSuccess }: LoginViewProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleLogin();
+    if (e.key === "Enter") {
+      handleLogin();
+    }
   };
 
   return (
-    <>
-      <h1 className="login-title">Login</h1>
-      <Box onKeyDown={handleKeyDown} className="login-wrapper">
-        <TextField
-          className="username-input"
-          label="Benutzername"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          fullWidth
-        />
-        <TextField
-          className="password-input"
-          label="Passwort"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          fullWidth
-        />
-        {error && <Alert severity="error">{error}</Alert>}
+    <main className="login-page">
+      <Box className="login-card">
+        <Box className="login-card-header">
+          <h1 className="login-title">Willkommen</h1>
 
-        <Box className="loginBtn-wrapper">
+          <p className="login-description">
+            Melden Sie sich an, um die Anwesenheitsverwaltung zu öffnen.
+          </p>
+        </Box>
+
+        <Box
+          onKeyDown={handleKeyDown}
+          className="login-form"
+        >
+          <TextField
+            label="Benutzername"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            fullWidth
+            autoComplete="username"
+          />
+
+          <TextField
+            label="Passwort"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            fullWidth
+            autoComplete="current-password"
+          />
+
+          {error && (
+            <Alert severity="error">
+              {error}
+            </Alert>
+          )}
+
           <Button
+            className="login-button"
             variant="contained"
+            size="large"
+            fullWidth
             onClick={handleLogin}
             disabled={isLoading || !username || !password}
           >
@@ -75,7 +102,7 @@ function LoginView({ onLoginSuccess }: LoginViewProps) {
           </Button>
         </Box>
       </Box>
-    </>
+    </main>
   );
 }
 

@@ -1,3 +1,5 @@
+import AppHeader from "./components/layout/AppHeader";
+import Sidebar from "./components/layout/Sidebar";
 import { useState } from "react";
 import ListView from "./components/ListView";
 import LoginView from "./components/LoginView";
@@ -26,21 +28,44 @@ function App() {
 
   return (
     <>
-      <div className="title">
-        <h1>AttendanceCTRL</h1>
-        <IconButton
-          aria-label="Info"
-          onClick={() => setHelpOpen(true)}
-          size="small"
-        >
-          <InfoOutlinedIcon />
-        </IconButton>
-      </div>
       {isLoggedIn ? (
-        <ListView onLogout={handleLogout} />
+        <div className="app-shell">
+
+          <AppHeader
+            onHelp={() => setHelpOpen(true)}
+            onLogout={handleLogout}
+          />
+
+          <div className="app-body">
+
+            <Sidebar />
+
+            <main className="app-main">
+              <ListView onLogout={handleLogout} />
+            </main>
+
+          </div>
+
+        </div>
       ) : (
-        <LoginView onLoginSuccess={() => setIsLoggedIn(true)} />
-      )}
+        <>
+        <div className="login-brand">
+          <h1>AttendanceCTRL</h1>
+
+          <IconButton
+            aria-label="Info"
+            onClick={() => setHelpOpen(true)}
+          >
+            <InfoOutlinedIcon />
+          </IconButton>
+        </div>
+
+        <LoginView
+         onLoginSuccess={() => setIsLoggedIn(true)}
+      />
+    </>
+  )}
+
       <Dialog
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
