@@ -94,3 +94,41 @@ export const mockAttendanceRows: AttendanceRow[] = [
 ];
 
 export const mockClassrooms = ["10A", "10B", "11A"];
+
+export const mockRecentRfidScans = [
+  {
+    id: 1,
+    time: "08:17",
+    studentName: "Can Demir",
+    classroom: "10A",
+    status: "LATE" as const,
+  },
+  {
+    id: 2,
+    time: "07:55",
+    studentName: "Jonas Koch",
+    classroom: "10A",
+    status: "PRESENT" as const,
+  },
+  {
+    id: 3,
+    time: "07:53",
+    studentName: "Paul Lehmann",
+    classroom: "10A",
+    status: "PRESENT" as const,
+  },
+  {
+    id: 4,
+    time: "07:50",
+    studentName: "Mia Fischer",
+    classroom: "10A",
+    status: "PRESENT" as const,
+  },
+  {
+    id: 5,
+    time: "07:48",
+    studentName: "Emma Becker",
+    classroom: "10A",
+    status: "PRESENT" as const,
+  },
+];

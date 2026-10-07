@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+
 import {
   Box,
   Button,
@@ -30,9 +31,13 @@ import "../css/main.css";
 import StatCard from "./attendance/StatCard";
 import StatusChip from "./attendance/StatusChip";
 
+import RecentRfidScans from "./dashboard/RecentRfidScans";
+import InformationPanel from "./dashboard/InformationPanel";
+
 import {
   mockAttendanceRows,
   mockClassrooms,
+  mockRecentRfidScans,
 } from "../mocks/attendanceMockData";
 
 import type {
@@ -42,26 +47,40 @@ import type {
 type StatusFilter = "ALL" | AttendanceStatus;
 
 function ListView() {
-  const [classes, setClasses] = useState<string[]>(mockClassrooms);
+  const [classes, setClasses] =
+    useState<string[]>(mockClassrooms);
 
-  const [selectedClass, setSelectedClass] = useState(
-    mockClassrooms[0] ?? "10A",
-  );
+  const [selectedClass, setSelectedClass] =
+    useState(
+      mockClassrooms[0] ?? "10A",
+    );
 
-  const [selectedDate, setSelectedDate] = useState(
-    () => new Date().toISOString().slice(0, 10),
-  );
+  const [selectedDate, setSelectedDate] =
+    useState(
+      () =>
+        new Date()
+          .toISOString()
+          .slice(0, 10),
+    );
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] =
+    useState("");
 
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("ALL");
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshing, setIsRefreshing] =
+    useState(false);
 
+  /*
+   * Bereits vorhandene Klassen aus dem Backend verwenden.
+   * Solange dort keine Klassen vorhanden sind,
+   * bleiben unsere Mock-Klassen sichtbar.
+   */
   useEffect(() => {
     const getClasses = async () => {
-      const token = localStorage.getItem("token");
+      const token =
+        localStorage.getItem("token");
 
       if (!token) {
         return;
@@ -85,19 +104,17 @@ function ListView() {
           );
         }
 
-        const data: string[] = await response.json();
+        const data: string[] =
+          await response.json();
 
-        /*
-         * Solange das Backend noch keine Klassen liefert,
-         * bleiben unsere Mock-Klassen sichtbar.
-         */
         if (data.length > 0) {
           setClasses(data);
 
-          setSelectedClass((currentClass) =>
-            data.includes(currentClass)
-              ? currentClass
-              : data[0],
+          setSelectedClass(
+            (currentClass) =>
+              data.includes(currentClass)
+                ? currentClass
+                : data[0],
           );
         }
       } catch (error) {
@@ -111,63 +128,117 @@ function ListView() {
     void getClasses();
   }, []);
 
+  /*
+   * Schüler der aktuell ausgewählten Klasse.
+   */
   const classRows = useMemo(() => {
     return mockAttendanceRows.filter(
-      (row) => row.classroom === selectedClass,
+      (row) =>
+        row.classroom === selectedClass,
     );
   }, [selectedClass]);
 
+  /*
+   * Kennzahlen für die vier Dashboard-Karten.
+   */
   const statistics = useMemo(() => {
     const total = classRows.length;
 
-    const present = classRows.filter(
-      (row) => row.status === "PRESENT",
-    ).length;
+    const present =
+      classRows.filter(
+        (row) =>
+          row.status === "PRESENT",
+      ).length;
 
-    const late = classRows.filter(
-      (row) => row.status === "LATE",
-    ).length;
+    const late =
+      classRows.filter(
+        (row) =>
+          row.status === "LATE",
+      ).length;
 
-    const absent = classRows.filter(
-      (row) => row.status === "ABSENT",
-    ).length;
+    const absent =
+      classRows.filter(
+        (row) =>
+          row.status === "ABSENT",
+      ).length;
 
-    const percentage = (value: number) =>
+    const percentage = (
+      value: number,
+    ) =>
       total === 0
         ? "0 %"
-        : `${((value / total) * 100).toFixed(1)} %`;
+        : `${(
+            (value / total) *
+            100
+          ).toFixed(1)} %`;
 
     return {
       total,
       present,
       late,
       absent,
-      presentPercentage: percentage(present),
-      latePercentage: percentage(late),
-      absentPercentage: percentage(absent),
+      presentPercentage:
+        percentage(present),
+      latePercentage:
+        percentage(late),
+      absentPercentage:
+        percentage(absent),
     };
   }, [classRows]);
 
+  /*
+   * Suche und Statusfilter.
+   */
   const filteredRows = useMemo(() => {
-    const normalizedSearch = searchTerm
-      .trim()
-      .toLowerCase();
+    const normalizedSearch =
+      searchTerm
+        .trim()
+        .toLowerCase();
 
-    return classRows.filter((row) => {
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        row.studentName
-          .toLowerCase()
-          .includes(normalizedSearch);
+    return classRows.filter(
+      (row) => {
+        const matchesSearch =
+          normalizedSearch.length === 0 ||
+          row.studentName
+            .toLowerCase()
+            .includes(
+              normalizedSearch,
+            );
 
-      const matchesStatus =
-        statusFilter === "ALL" ||
-        row.status === statusFilter;
+        const matchesStatus =
+          statusFilter === "ALL" ||
+          row.status ===
+            statusFilter;
 
-      return matchesSearch && matchesStatus;
-    });
-  }, [classRows, searchTerm, statusFilter]);
+        return (
+          matchesSearch &&
+          matchesStatus
+        );
+      },
+    );
+  }, [
+    classRows,
+    searchTerm,
+    statusFilter,
+  ]);
 
+  /*
+   * RFID-Scans passend zur ausgewählten Klasse.
+   */
+  const recentRfidScans =
+    useMemo(() => {
+      return mockRecentRfidScans.filter(
+        (scan) =>
+          scan.classroom ===
+          selectedClass,
+      );
+    }, [selectedClass]);
+
+  /*
+   * Aktuell nur Frontend-Demo.
+   * Später wird hier die echte API
+   * zum Aktualisieren aufgerufen.
+   */
   const handleRefresh = () => {
     setIsRefreshing(true);
 
@@ -188,9 +259,16 @@ function ListView() {
 
       case "ABSENT":
         return "Abwesend";
+
+      default:
+        return "Unbekannt";
     }
   };
 
+  /*
+   * CSV-Export funktioniert bereits
+   * auf Basis der aktuell sichtbaren Daten.
+   */
   const handleExport = () => {
     const header = [
       "Name",
@@ -200,43 +278,61 @@ function ListView() {
       "Check-out",
     ];
 
-    const rows = filteredRows.map((row) => [
-      row.studentName,
-      row.classroom,
-      getStatusLabel(row.status),
-      row.checkIn ?? "",
-      row.checkOut ?? "",
-    ]);
+    const rows =
+      filteredRows.map((row) => [
+        row.studentName,
+        row.classroom,
+        getStatusLabel(
+          row.status,
+        ),
+        row.checkIn ?? "",
+        row.checkOut ?? "",
+      ]);
 
     const csvContent = [
       header,
       ...rows,
     ]
-      .map((row) => row.join(";"))
+      .map((row) =>
+        row.join(";"),
+      )
       .join("\n");
 
     const blob = new Blob(
-      ["\uFEFF", csvContent],
+      [
+        "\uFEFF",
+        csvContent,
+      ],
       {
         type: "text/csv;charset=utf-8;",
       },
     );
 
-    const url = URL.createObjectURL(blob);
+    const url =
+      URL.createObjectURL(blob);
 
-    const link = document.createElement("a");
+    const link =
+      document.createElement("a");
 
     link.href = url;
+
     link.download =
       `anwesenheit-${selectedClass}-${selectedDate}.csv`;
 
-    document.body.appendChild(link);
+    document.body.appendChild(
+      link,
+    );
+
     link.click();
+
     link.remove();
 
     URL.revokeObjectURL(url);
   };
 
+  /*
+   * Spalten der Schülerliste.
+   */
   const columns: GridColDef[] = [
     {
       field: "id",
@@ -255,6 +351,7 @@ function ListView() {
       headerName: "Status",
       width: 160,
       sortable: false,
+
       renderCell: (params) => (
         <StatusChip
           status={
@@ -267,6 +364,7 @@ function ListView() {
       field: "checkIn",
       headerName: "Check-in",
       width: 130,
+
       renderCell: (params) =>
         params.value ?? "—",
     },
@@ -274,6 +372,7 @@ function ListView() {
       field: "checkOut",
       headerName: "Check-out",
       width: 130,
+
       renderCell: (params) =>
         params.value ?? "—",
     },
@@ -283,6 +382,7 @@ function ListView() {
       width: 90,
       sortable: false,
       filterable: false,
+
       renderCell: () => (
         <IconButton
           size="small"
@@ -296,240 +396,348 @@ function ListView() {
 
   return (
     <section className="attendance-page">
+      {/* Seitentitel */}
       <div className="page-heading">
         <div>
-          <h1>Anwesenheitsübersicht</h1>
+          <h1>
+            Anwesenheitsübersicht
+          </h1>
 
           <p>
-            Übersicht der Anwesenheit für die
-            ausgewählte Klasse und das gewählte Datum.
+            Übersicht der Anwesenheit
+            für die ausgewählte Klasse
+            und das gewählte Datum.
           </p>
         </div>
       </div>
 
-      <div className="attendance-toolbar-card">
-        <div className="toolbar-field">
-          <FormControl fullWidth>
-            <InputLabel>Klasse</InputLabel>
+      {/* Hauptbereich + rechte Spalte */}
+      <div className="dashboard-content-grid">
 
-            <Select
-              value={selectedClass}
-              label="Klasse"
-              onChange={(event) =>
-                setSelectedClass(
-                  event.target.value,
-                )
-              }
-            >
-              {classes.map((classroom) => (
-                <MenuItem
-                  key={classroom}
-                  value={classroom}
+        {/* Linke / große Dashboard-Spalte */}
+        <div className="dashboard-main-column">
+
+          {/* Filter und Aktionen */}
+          <div className="attendance-toolbar-card">
+            <div className="toolbar-field">
+              <FormControl fullWidth>
+                <InputLabel>
+                  Klasse
+                </InputLabel>
+
+                <Select
+                  value={
+                    selectedClass
+                  }
+                  label="Klasse"
+                  onChange={(
+                    event,
+                  ) =>
+                    setSelectedClass(
+                      event.target
+                        .value,
+                    )
+                  }
                 >
-                  {classroom}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </div>
+                  {classes.map(
+                    (
+                      classroom,
+                    ) => (
+                      <MenuItem
+                        key={
+                          classroom
+                        }
+                        value={
+                          classroom
+                        }
+                      >
+                        {
+                          classroom
+                        }
+                      </MenuItem>
+                    ),
+                  )}
+                </Select>
+              </FormControl>
+            </div>
 
-        <div className="toolbar-field">
-          <TextField
-            label="Datum"
-            type="date"
-            value={selectedDate}
-            fullWidth
-            onChange={(event) =>
-              setSelectedDate(
-                event.target.value,
-              )
-            }
-            slotProps={{
-              inputLabel: {
-                shrink: true,
-              },
-            }}
-          />
-        </div>
-
-        <Button
-          className="refresh-button"
-          variant="contained"
-          startIcon={<RefreshOutlined />}
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-        >
-          {isRefreshing
-            ? "Wird aktualisiert..."
-            : "Anwesenheit aktualisieren"}
-        </Button>
-
-        <Button
-          className="export-button"
-          variant="outlined"
-          startIcon={<DownloadOutlined />}
-          onClick={handleExport}
-        >
-          Exportieren
-        </Button>
-      </div>
-
-      <div className="stats-grid">
-        <StatCard
-          title="Gesamtschüler"
-          value={statistics.total}
-          subtitle={`in Klasse ${selectedClass}`}
-          icon={<GroupsOutlined />}
-          variant="total"
-        />
-
-        <StatCard
-          title="Anwesend"
-          value={statistics.present}
-          subtitle={
-            statistics.presentPercentage
-          }
-          icon={<CheckCircleOutlined />}
-          variant="present"
-        />
-
-        <StatCard
-          title="Verspätet"
-          value={statistics.late}
-          subtitle={
-            statistics.latePercentage
-          }
-          icon={<Schedule />}
-          variant="late"
-        />
-
-        <StatCard
-          title="Abwesend"
-          value={statistics.absent}
-          subtitle={
-            statistics.absentPercentage
-          }
-          icon={<HighlightOff />}
-          variant="absent"
-        />
-      </div>
-
-      <div className="table-card">
-        <div className="attendance-table-header">
-          <div>
-            <h2>
-              Schülerliste ({selectedClass})
-            </h2>
-
-            <p>
-              {filteredRows.length} von{" "}
-              {classRows.length} Schülern angezeigt
-            </p>
-          </div>
-
-          <div className="table-controls">
-            <TextField
-              size="small"
-              placeholder="Schüler suchen..."
-              value={searchTerm}
-              onChange={(event) =>
-                setSearchTerm(
-                  event.target.value,
-                )
-              }
-            />
-
-            <FormControl
-              size="small"
-              className="status-filter"
-            >
-              <InputLabel>Status</InputLabel>
-
-              <Select
-                value={statusFilter}
-                label="Status"
-                onChange={(event) =>
-                  setStatusFilter(
+            <div className="toolbar-field">
+              <TextField
+                label="Datum"
+                type="date"
+                value={
+                  selectedDate
+                }
+                fullWidth
+                onChange={(
+                  event,
+                ) =>
+                  setSelectedDate(
                     event.target
-                      .value as StatusFilter,
+                      .value,
                   )
                 }
-              >
-                <MenuItem value="ALL">
-                  Alle
-                </MenuItem>
+                slotProps={{
+                  inputLabel: {
+                    shrink: true,
+                  },
+                }}
+              />
+            </div>
 
-                <MenuItem value="PRESENT">
-                  Anwesend
-                </MenuItem>
+            <Button
+              className="refresh-button"
+              variant="contained"
+              startIcon={
+                <RefreshOutlined />
+              }
+              onClick={
+                handleRefresh
+              }
+              disabled={
+                isRefreshing
+              }
+            >
+              {isRefreshing
+                ? "Wird aktualisiert..."
+                : "Anwesenheit aktualisieren"}
+            </Button>
 
-                <MenuItem value="LATE">
-                  Verspätet
-                </MenuItem>
+            <Button
+              className="export-button"
+              variant="outlined"
+              startIcon={
+                <DownloadOutlined />
+              }
+              onClick={
+                handleExport
+              }
+            >
+              Exportieren
+            </Button>
+          </div>
 
-                <MenuItem value="ABSENT">
-                  Abwesend
-                </MenuItem>
-              </Select>
-            </FormControl>
+          {/* Kennzahlen */}
+          <div className="stats-grid">
+            <StatCard
+              title="Gesamtschüler"
+              value={
+                statistics.total
+              }
+              subtitle={`in Klasse ${selectedClass}`}
+              icon={
+                <GroupsOutlined />
+              }
+              variant="total"
+            />
+
+            <StatCard
+              title="Anwesend"
+              value={
+                statistics.present
+              }
+              subtitle={
+                statistics.presentPercentage
+              }
+              icon={
+                <CheckCircleOutlined />
+              }
+              variant="present"
+            />
+
+            <StatCard
+              title="Verspätet"
+              value={
+                statistics.late
+              }
+              subtitle={
+                statistics.latePercentage
+              }
+              icon={
+                <Schedule />
+              }
+              variant="late"
+            />
+
+            <StatCard
+              title="Abwesend"
+              value={
+                statistics.absent
+              }
+              subtitle={
+                statistics.absentPercentage
+              }
+              icon={
+                <HighlightOff />
+              }
+              variant="absent"
+            />
+          </div>
+
+          {/* Schülerliste */}
+          <div className="table-card">
+            <div className="attendance-table-header">
+              <div>
+                <h2>
+                  Schülerliste (
+                  {selectedClass})
+                </h2>
+
+                <p>
+                  {
+                    filteredRows.length
+                  }{" "}
+                  von{" "}
+                  {
+                    classRows.length
+                  }{" "}
+                  Schülern angezeigt
+                </p>
+              </div>
+
+              <div className="table-controls">
+                <TextField
+                  size="small"
+                  placeholder="Schüler suchen..."
+                  value={
+                    searchTerm
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setSearchTerm(
+                      event.target
+                        .value,
+                    )
+                  }
+                />
+
+                <FormControl
+                  size="small"
+                  className="status-filter"
+                >
+                  <InputLabel>
+                    Status
+                  </InputLabel>
+
+                  <Select
+                    value={
+                      statusFilter
+                    }
+                    label="Status"
+                    onChange={(
+                      event,
+                    ) =>
+                      setStatusFilter(
+                        event.target
+                          .value as StatusFilter,
+                      )
+                    }
+                  >
+                    <MenuItem value="ALL">
+                      Alle
+                    </MenuItem>
+
+                    <MenuItem value="PRESENT">
+                      Anwesend
+                    </MenuItem>
+
+                    <MenuItem value="LATE">
+                      Verspätet
+                    </MenuItem>
+
+                    <MenuItem value="ABSENT">
+                      Abwesend
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+              </div>
+            </div>
+
+            <Box
+              sx={{
+                height: 460,
+                width: "100%",
+              }}
+            >
+              <DataGrid
+                rows={
+                  filteredRows
+                }
+                columns={
+                  columns
+                }
+                disableRowSelectionOnClick
+                pageSizeOptions={[
+                  10,
+                  25,
+                ]}
+                initialState={{
+                  pagination: {
+                    paginationModel:
+                      {
+                        page: 0,
+                        pageSize: 10,
+                      },
+                  },
+                }}
+                sx={{
+                  border: 0,
+
+                  "& .MuiDataGrid-columnHeaders":
+                    {
+                      backgroundColor:
+                        "#f8fafc",
+                      borderBottom:
+                        "1px solid #e5e9f0",
+                    },
+
+                  "& .MuiDataGrid-columnHeaderTitle":
+                    {
+                      fontWeight: 600,
+                      color:
+                        "#344054",
+                    },
+
+                  "& .MuiDataGrid-cell":
+                    {
+                      borderBottom:
+                        "1px solid #eef1f5",
+                      color:
+                        "#344054",
+                    },
+
+                  "& .MuiDataGrid-row:hover":
+                    {
+                      backgroundColor:
+                        "#f8fbff",
+                    },
+
+                  "& .MuiDataGrid-footerContainer":
+                    {
+                      borderTop:
+                        "1px solid #e5e9f0",
+                    },
+                }}
+              />
+            </Box>
           </div>
         </div>
 
-        <Box
-          sx={{
-            height: 560,
-            width: "100%",
-          }}
-        >
-          <DataGrid
-            rows={filteredRows}
-            columns={columns}
-            disableRowSelectionOnClick
-            pageSizeOptions={[10, 25]}
-            initialState={{
-              pagination: {
-                paginationModel: {
-                  page: 0,
-                  pageSize: 10,
-                },
-              },
-            }}
-            sx={{
-              border: 0,
-
-              "& .MuiDataGrid-columnHeaders":
-                {
-                  backgroundColor:
-                    "#f8fafc",
-                  borderBottom:
-                    "1px solid #e5e9f0",
-                },
-
-              "& .MuiDataGrid-columnHeaderTitle":
-                {
-                  fontWeight: 600,
-                  color: "#344054",
-                },
-
-              "& .MuiDataGrid-cell": {
-                borderBottom:
-                  "1px solid #eef1f5",
-                color: "#344054",
-              },
-
-              "& .MuiDataGrid-row:hover": {
-                backgroundColor:
-                  "#f8fbff",
-              },
-
-              "& .MuiDataGrid-footerContainer":
-                {
-                  borderTop:
-                    "1px solid #e5e9f0",
-                },
-            }}
+        {/* Rechte Dashboard-Spalte */}
+        <aside className="dashboard-side-column">
+          <RecentRfidScans
+            scans={
+              recentRfidScans
+            }
           />
-        </Box>
+
+          <InformationPanel
+            absentCount={
+              statistics.absent
+            }
+          />
+        </aside>
       </div>
     </section>
   );
