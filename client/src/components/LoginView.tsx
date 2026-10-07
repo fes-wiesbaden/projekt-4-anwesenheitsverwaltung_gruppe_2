@@ -1,5 +1,14 @@
-import { useState } from "react";
-import { Box, Button, TextField, Alert } from "@mui/material";
+import {
+  useState,
+  type FormEvent,
+} from "react";
+
+import {
+  Alert,
+  Box,
+  Button,
+  TextField,
+} from "@mui/material";
 
 import "../css/main.css";
 
@@ -7,48 +16,103 @@ interface LoginViewProps {
   onLoginSuccess: () => void;
 }
 
-function LoginView({ onLoginSuccess }: LoginViewProps) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+interface LoginResponse {
+  token: string;
+}
 
-  const handleLogin = async () => {
+function LoginView({
+  onLoginSuccess,
+}: LoginViewProps) {
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [isLoading, setIsLoading] =
+    useState(false);
+
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
     setError(null);
     setIsLoading(true);
 
+    const formData =
+      new FormData(event.currentTarget);
+
+    const username =
+      String(
+        formData.get("username") ?? "",
+      ).trim();
+
+    const password =
+      String(
+        formData.get("password") ?? "",
+      );
+
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        "/api/auth/login",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            username,
+            password,
+          }),
         },
-        credentials: "include",
-        body: JSON.stringify({
-          username,
-          password,
-        }),
-      });
+      );
 
       if (!response.ok) {
-        throw new Error("Login fehlgeschlagen");
+        if (
+          response.status === 401 ||
+          response.status === 403
+        ) {
+          setError(
+            "Benutzername oder Passwort falsch.",
+          );
+        } else {
+          setError(
+            `Anmeldung fehlgeschlagen (${response.status}).`,
+          );
+        }
+
+        return;
       }
 
-      const data = await response.json();
+      const data =
+        (await response.json()) as LoginResponse;
 
-      localStorage.setItem("token", data.token);
+      if (!data.token) {
+        setError(
+          "Der Server hat keinen Anmelde-Token zurückgegeben.",
+        );
+
+        return;
+      }
+
+      sessionStorage.setItem(
+        "token",
+        data.token,
+      );
 
       onLoginSuccess();
-    } catch {
-      setError("Benutzername oder Passwort falsch.");
+    } catch (error) {
+      console.error(
+        "Login-Fehler:",
+        error,
+      );
+
+      setError(
+        "Der Server ist momentan nicht erreichbar.",
+      );
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleLogin();
     }
   };
 
@@ -56,32 +120,36 @@ function LoginView({ onLoginSuccess }: LoginViewProps) {
     <main className="login-page">
       <Box className="login-card">
         <Box className="login-card-header">
-          <h1 className="login-title">Willkommen</h1>
+          <h1 className="login-title">
+            Willkommen
+          </h1>
 
           <p className="login-description">
-            Melden Sie sich an, um die Anwesenheitsverwaltung zu öffnen.
+            Melden Sie sich an, um die
+            Anwesenheitsverwaltung zu öffnen.
           </p>
         </Box>
 
         <Box
-          onKeyDown={handleKeyDown}
+          component="form"
           className="login-form"
+          onSubmit={handleSubmit}
         >
           <TextField
+            name="username"
             label="Benutzername"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
             fullWidth
             autoComplete="username"
+            required
           />
 
           <TextField
+            name="password"
             label="Passwort"
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             fullWidth
             autoComplete="current-password"
+            required
           />
 
           {error && (
@@ -95,10 +163,12 @@ function LoginView({ onLoginSuccess }: LoginViewProps) {
             variant="contained"
             size="large"
             fullWidth
-            onClick={handleLogin}
-            disabled={isLoading || !username || !password}
+            type="submit"
+            disabled={isLoading}
           >
-            {isLoading ? "Wird geprüft..." : "Einloggen"}
+            {isLoading
+              ? "Wird geprüft..."
+              : "Einloggen"}
           </Button>
         </Box>
       </Box>

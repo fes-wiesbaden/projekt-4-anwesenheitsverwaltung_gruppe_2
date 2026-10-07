@@ -17,12 +17,13 @@ import {
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
-    () => Boolean(localStorage.getItem("token")),
-    );
+  () => Boolean(sessionStorage.getItem("token")),
+);
+
   const [helpOpen, setHelpOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
     setIsLoggedIn(false);
   };
 
