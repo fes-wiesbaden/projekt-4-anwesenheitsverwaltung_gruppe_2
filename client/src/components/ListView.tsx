@@ -41,47 +41,47 @@ function ListView() {
   const [classes, setClasses] = useState<string[]>(DUMMY_CLASSES);
 
   const getClasses = async (): Promise<string[] | undefined> => {
-    try {
-      const response = await fetch(
-        "/api/classroom/allClassrooms",
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          credentials: "include",
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    return undefined;
+  }
+
+  try {
+    const response = await fetch(
+      "/api/classroom/allClassrooms",
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
+      },
+    );
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+
+      console.error(
+        "Server error:",
+        response.status,
+        errorBody,
       );
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-
-        console.error(
-          "Server error:",
-          response.status,
-          errorBody,
-        );
-
-        throw new Error(
-          "Klassenräume konnten nicht vom Server abgerufen werden.",
-        );
-      }
-
-      const data: {
-        token: string;
-        classes: string[];
-      } = await response.json();
-
-      localStorage.setItem("token", data.token);
-
-      return data.classes;
-    } catch (err) {
-      console.error(err);
-
-      return undefined;
+      throw new Error(
+        "Klassen konnten nicht vom Server abgerufen werden.",
+      );
     }
-  };
+
+    const data: string[] = await response.json();
+
+    return data;
+  } catch (err) {
+    console.error(err);
+
+    return undefined;
+  }
+};
 
   useEffect(() => {
     const loadClasses = async () => {
