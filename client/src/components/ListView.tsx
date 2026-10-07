@@ -1,6 +1,9 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
+  Button,
   FormControl,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -8,151 +11,286 @@ import {
 } from "@mui/material";
 
 import {
+  CheckCircleOutlined,
+  DownloadOutlined,
+  GroupsOutlined,
+  HighlightOff,
+  MoreVert,
+  RefreshOutlined,
+  Schedule,
+} from "@mui/icons-material";
+
+import {
   DataGrid,
-  GridActionsCellItem,
   type GridColDef,
 } from "@mui/x-data-grid";
 
-import EditIcon from "@mui/icons-material/Edit";
-
-import { useEffect, useState } from "react";
-
 import "../css/main.css";
 
+import StatCard from "./attendance/StatCard";
+import StatusChip from "./attendance/StatusChip";
+
+import {
+  mockAttendanceRows,
+  mockClassrooms,
+} from "../mocks/attendanceMockData";
+
+import type {
+  AttendanceStatus,
+} from "../types/attendance";
+
+type StatusFilter = "ALL" | AttendanceStatus;
+
 function ListView() {
-  // DUMMY DATA:
-  // TODO: später durch echte Daten vom Backend ersetzen
-  const rows = [
-    {
-      id: 1,
-      lastName: "Snow",
-      firstName: "Jon",
-    },
-  ];
+  const [classes, setClasses] = useState<string[]>(mockClassrooms);
 
-  // Fallback, solange Backend-Daten noch nicht sicher geprüft sind
-  const DUMMY_CLASSES: string[] = [
-    "Klasse 1",
-    "Klasse 2",
-    "Klasse 3",
-  ];
+  const [selectedClass, setSelectedClass] = useState(
+    mockClassrooms[0] ?? "10A",
+  );
 
-  const [selectedClass, setSelectedClass] = useState("");
-  const [classes, setClasses] = useState<string[]>(DUMMY_CLASSES);
+  const [selectedDate, setSelectedDate] = useState(
+    () => new Date().toISOString().slice(0, 10),
+  );
 
-  const getClasses = async (): Promise<string[] | undefined> => {
-  const token = localStorage.getItem("token");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  if (!token) {
-    return undefined;
-  }
+  const [statusFilter, setStatusFilter] =
+    useState<StatusFilter>("ALL");
 
-  try {
-    const response = await fetch(
-      "/api/classroom/allClassrooms",
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: "include",
-      },
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-
-      console.error(
-        "Server error:",
-        response.status,
-        errorBody,
-      );
-
-      throw new Error(
-        "Klassen konnten nicht vom Server abgerufen werden.",
-      );
-    }
-
-    const data: string[] = await response.json();
-
-    return data;
-  } catch (err) {
-    console.error(err);
-
-    return undefined;
-  }
-};
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    const loadClasses = async () => {
-      const data = await getClasses();
+    const getClasses = async () => {
+      const token = localStorage.getItem("token");
 
-      console.log(
-        "Fetched classes:",
-        data,
-        Array.isArray(data)
-          ? typeof data[0]
-          : "no data",
-      );
+      if (!token) {
+        return;
+      }
 
-      if (data) {
-        setClasses(data);
+      try {
+        const response = await fetch(
+          "/api/classroom/allClassrooms",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            credentials: "include",
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Klassen konnten nicht geladen werden.",
+          );
+        }
+
+        const data: string[] = await response.json();
+
+        /*
+         * Solange das Backend noch keine Klassen liefert,
+         * bleiben unsere Mock-Klassen sichtbar.
+         */
+        if (data.length > 0) {
+          setClasses(data);
+
+          setSelectedClass((currentClass) =>
+            data.includes(currentClass)
+              ? currentClass
+              : data[0],
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Backend-Klassen nicht verfügbar. Mock-Daten werden verwendet.",
+          error,
+        );
       }
     };
 
-    loadClasses();
+    void getClasses();
   }, []);
 
-  const columns: GridColDef<(typeof rows)[number]>[] = [
+  const classRows = useMemo(() => {
+    return mockAttendanceRows.filter(
+      (row) => row.classroom === selectedClass,
+    );
+  }, [selectedClass]);
+
+  const statistics = useMemo(() => {
+    const total = classRows.length;
+
+    const present = classRows.filter(
+      (row) => row.status === "PRESENT",
+    ).length;
+
+    const late = classRows.filter(
+      (row) => row.status === "LATE",
+    ).length;
+
+    const absent = classRows.filter(
+      (row) => row.status === "ABSENT",
+    ).length;
+
+    const percentage = (value: number) =>
+      total === 0
+        ? "0 %"
+        : `${((value / total) * 100).toFixed(1)} %`;
+
+    return {
+      total,
+      present,
+      late,
+      absent,
+      presentPercentage: percentage(present),
+      latePercentage: percentage(late),
+      absentPercentage: percentage(absent),
+    };
+  }, [classRows]);
+
+  const filteredRows = useMemo(() => {
+    const normalizedSearch = searchTerm
+      .trim()
+      .toLowerCase();
+
+    return classRows.filter((row) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        row.studentName
+          .toLowerCase()
+          .includes(normalizedSearch);
+
+      const matchesStatus =
+        statusFilter === "ALL" ||
+        row.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [classRows, searchTerm, statusFilter]);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+
+    window.setTimeout(() => {
+      setIsRefreshing(false);
+    }, 600);
+  };
+
+  const getStatusLabel = (
+    status: AttendanceStatus,
+  ) => {
+    switch (status) {
+      case "PRESENT":
+        return "Anwesend";
+
+      case "LATE":
+        return "Verspätet";
+
+      case "ABSENT":
+        return "Abwesend";
+    }
+  };
+
+  const handleExport = () => {
+    const header = [
+      "Name",
+      "Klasse",
+      "Status",
+      "Check-in",
+      "Check-out",
+    ];
+
+    const rows = filteredRows.map((row) => [
+      row.studentName,
+      row.classroom,
+      getStatusLabel(row.status),
+      row.checkIn ?? "",
+      row.checkOut ?? "",
+    ]);
+
+    const csvContent = [
+      header,
+      ...rows,
+    ]
+      .map((row) => row.join(";"))
+      .join("\n");
+
+    const blob = new Blob(
+      ["\uFEFF", csvContent],
+      {
+        type: "text/csv;charset=utf-8;",
+      },
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download =
+      `anwesenheit-${selectedClass}-${selectedDate}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  };
+
+  const columns: GridColDef[] = [
     {
       field: "id",
-      headerName: "ID",
-      width: 90,
+      headerName: "#",
+      width: 60,
+      sortable: false,
     },
     {
-      field: "firstName",
-      headerName: "Vorname",
-      width: 150,
-      editable: false,
-    },
-    {
-      field: "lastName",
-      headerName: "Nachname",
-      width: 150,
-      editable: false,
+      field: "studentName",
+      headerName: "Name",
+      flex: 1,
+      minWidth: 190,
     },
     {
       field: "status",
       headerName: "Status",
-      width: 130,
-      editable: false,
+      width: 160,
+      sortable: false,
+      renderCell: (params) => (
+        <StatusChip
+          status={
+            params.value as AttendanceStatus
+          }
+        />
+      ),
     },
     {
-      field: "presentSince",
+      field: "checkIn",
       headerName: "Check-in",
       width: 130,
-      editable: false,
+      renderCell: (params) =>
+        params.value ?? "—",
     },
     {
-      field: "presentUntil",
+      field: "checkOut",
       headerName: "Check-out",
       width: 130,
-      editable: false,
+      renderCell: (params) =>
+        params.value ?? "—",
     },
     {
-      field: "actions",
-      type: "actions",
+      field: "action",
       headerName: "Aktion",
       width: 90,
-      getActions: () => [
-        <GridActionsCellItem
-          icon={<EditIcon />}
-          label="Bearbeiten"
-          onClick={() => {
-            // TODO: später echte Bearbeiten-Funktion einbauen
-          }}
-        />,
-      ],
+      sortable: false,
+      filterable: false,
+      renderCell: () => (
+        <IconButton
+          size="small"
+          aria-label="Aktionen anzeigen"
+        >
+          <MoreVert fontSize="small" />
+        </IconButton>
+      ),
     },
   ];
 
@@ -163,44 +301,49 @@ function ListView() {
           <h1>Anwesenheitsübersicht</h1>
 
           <p>
-            Übersicht der Anwesenheit für die ausgewählte Klasse
-            und das gewählte Datum.
+            Übersicht der Anwesenheit für die
+            ausgewählte Klasse und das gewählte Datum.
           </p>
         </div>
       </div>
 
-      <div className="filter-card">
-        <div className="filter-field">
+      <div className="attendance-toolbar-card">
+        <div className="toolbar-field">
           <FormControl fullWidth>
             <InputLabel>Klasse</InputLabel>
 
             <Select
-              labelId="class-select-label"
-              id="class-select"
               value={selectedClass}
               label="Klasse"
-              onChange={(e) =>
-                setSelectedClass(e.target.value)
+              onChange={(event) =>
+                setSelectedClass(
+                  event.target.value,
+                )
               }
             >
-              {classes.map((className) => (
+              {classes.map((classroom) => (
                 <MenuItem
-                  key={className}
-                  value={className}
+                  key={classroom}
+                  value={classroom}
                 >
-                  {className}
+                  {classroom}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
         </div>
 
-        <div className="filter-field">
+        <div className="toolbar-field">
           <TextField
-            name="datum"
             label="Datum"
             type="date"
+            value={selectedDate}
             fullWidth
+            onChange={(event) =>
+              setSelectedDate(
+                event.target.value,
+              )
+            }
             slotProps={{
               inputLabel: {
                 shrink: true,
@@ -208,31 +351,183 @@ function ListView() {
             }}
           />
         </div>
+
+        <Button
+          className="refresh-button"
+          variant="contained"
+          startIcon={<RefreshOutlined />}
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+        >
+          {isRefreshing
+            ? "Wird aktualisiert..."
+            : "Anwesenheit aktualisieren"}
+        </Button>
+
+        <Button
+          className="export-button"
+          variant="outlined"
+          startIcon={<DownloadOutlined />}
+          onClick={handleExport}
+        >
+          Exportieren
+        </Button>
+      </div>
+
+      <div className="stats-grid">
+        <StatCard
+          title="Gesamtschüler"
+          value={statistics.total}
+          subtitle={`in Klasse ${selectedClass}`}
+          icon={<GroupsOutlined />}
+          variant="total"
+        />
+
+        <StatCard
+          title="Anwesend"
+          value={statistics.present}
+          subtitle={
+            statistics.presentPercentage
+          }
+          icon={<CheckCircleOutlined />}
+          variant="present"
+        />
+
+        <StatCard
+          title="Verspätet"
+          value={statistics.late}
+          subtitle={
+            statistics.latePercentage
+          }
+          icon={<Schedule />}
+          variant="late"
+        />
+
+        <StatCard
+          title="Abwesend"
+          value={statistics.absent}
+          subtitle={
+            statistics.absentPercentage
+          }
+          icon={<HighlightOff />}
+          variant="absent"
+        />
       </div>
 
       <div className="table-card">
-        <div className="table-header">
-          <h2>Schülerliste</h2>
+        <div className="attendance-table-header">
+          <div>
+            <h2>
+              Schülerliste ({selectedClass})
+            </h2>
+
+            <p>
+              {filteredRows.length} von{" "}
+              {classRows.length} Schülern angezeigt
+            </p>
+          </div>
+
+          <div className="table-controls">
+            <TextField
+              size="small"
+              placeholder="Schüler suchen..."
+              value={searchTerm}
+              onChange={(event) =>
+                setSearchTerm(
+                  event.target.value,
+                )
+              }
+            />
+
+            <FormControl
+              size="small"
+              className="status-filter"
+            >
+              <InputLabel>Status</InputLabel>
+
+              <Select
+                value={statusFilter}
+                label="Status"
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target
+                      .value as StatusFilter,
+                  )
+                }
+              >
+                <MenuItem value="ALL">
+                  Alle
+                </MenuItem>
+
+                <MenuItem value="PRESENT">
+                  Anwesend
+                </MenuItem>
+
+                <MenuItem value="LATE">
+                  Verspätet
+                </MenuItem>
+
+                <MenuItem value="ABSENT">
+                  Abwesend
+                </MenuItem>
+              </Select>
+            </FormControl>
+          </div>
         </div>
 
         <Box
           sx={{
-            height: 400,
+            height: 560,
             width: "100%",
           }}
         >
           <DataGrid
-            rows={rows}
+            rows={filteredRows}
             columns={columns}
+            disableRowSelectionOnClick
+            pageSizeOptions={[10, 25]}
             initialState={{
               pagination: {
                 paginationModel: {
-                  pageSize: 5,
+                  page: 0,
+                  pageSize: 10,
                 },
               },
             }}
-            pageSizeOptions={[5]}
-            disableRowSelectionOnClick
+            sx={{
+              border: 0,
+
+              "& .MuiDataGrid-columnHeaders":
+                {
+                  backgroundColor:
+                    "#f8fafc",
+                  borderBottom:
+                    "1px solid #e5e9f0",
+                },
+
+              "& .MuiDataGrid-columnHeaderTitle":
+                {
+                  fontWeight: 600,
+                  color: "#344054",
+                },
+
+              "& .MuiDataGrid-cell": {
+                borderBottom:
+                  "1px solid #eef1f5",
+                color: "#344054",
+              },
+
+              "& .MuiDataGrid-row:hover": {
+                backgroundColor:
+                  "#f8fbff",
+              },
+
+              "& .MuiDataGrid-footerContainer":
+                {
+                  borderTop:
+                    "1px solid #e5e9f0",
+                },
+            }}
           />
         </Box>
       </div>
