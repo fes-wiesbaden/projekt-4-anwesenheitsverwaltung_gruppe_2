@@ -41,7 +41,7 @@ function App() {
             <Sidebar />
 
             <main className="app-main">
-              <ListView onLogout={handleLogout} />
+              <ListView />
             </main>
 
           </div>
