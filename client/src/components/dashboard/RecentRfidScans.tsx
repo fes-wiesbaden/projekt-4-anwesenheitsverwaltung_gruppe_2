@@ -1,59 +1,66 @@
-import { SensorsOutlined } from "@mui/icons-material";
+import { Button } from "@mui/material";
+
+import ArrowForwardOutlinedIcon from "@mui/icons-material/ArrowForwardOutlined";
+import SensorsOutlinedIcon from "@mui/icons-material/SensorsOutlined";
 
 import StatusChip from "../attendance/StatusChip";
-import type { AttendanceStatus } from "../../types/attendance";
 
-export interface RecentRfidScan {
-  id: number;
-  time: string;
-  studentName: string;
-  classroom: string;
-  status: AttendanceStatus;
-}
+import type { AttendanceRow } from "../../types/attendance";
 
 interface RecentRfidScansProps {
-  scans: RecentRfidScan[];
+  rows: AttendanceRow[];
 }
 
 function RecentRfidScans({
-  scans,
+  rows,
 }: RecentRfidScansProps) {
   return (
     <section className="side-card">
       <div className="side-card-header">
         <div className="side-card-title">
-          <SensorsOutlined />
+          <SensorsOutlinedIcon />
 
           <h2>Letzte RFID-Scans</h2>
         </div>
 
-        <button
-          className="side-link-button"
-          type="button"
+        <Button
+          className="show-all-button"
+          size="small"
+          endIcon={<ArrowForwardOutlinedIcon />}
         >
           Alle anzeigen
-        </button>
+        </Button>
       </div>
 
       <div className="rfid-scan-list">
-        {scans.map((scan) => (
-          <div
-            className="rfid-scan-item"
-            key={scan.id}
-          >
-            <div className="rfid-scan-time">
-              {scan.time}
-            </div>
-
-            <div className="rfid-scan-person">
-              <strong>{scan.studentName}</strong>
-
-              <span>{scan.classroom}</span>
-            </div>
-
-            <StatusChip status={scan.status} />
+        {rows.length === 0 ? (
+          <div className="empty-side-message">
+            Noch keine RFID-Scans vorhanden.
           </div>
-        ))}
+        ) : (
+          rows.map((row) => (
+            <div
+              className="rfid-scan-item"
+              key={row.studentId}
+            >
+              <div className="rfid-scan-time">
+                {row.checkIn ?? "—"}
+              </div>
+
+              <div className="rfid-scan-student">
+                <strong className="rfid-student-name">
+                  {row.studentName}
+                </strong>
+
+                <span className="rfid-student-class">
+                  Klasse {row.classroom}
+                </span>
+              </div>
+
+              <StatusChip status={row.status} />
+            </div>
+          ))
+        )}
       </div>
     </section>
   );

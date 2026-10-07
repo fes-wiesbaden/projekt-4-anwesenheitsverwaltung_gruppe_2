@@ -37,7 +37,6 @@ import InformationPanel from "./dashboard/InformationPanel";
 import {
   mockAttendanceRows,
   mockClassrooms,
-  mockRecentRfidScans,
 } from "../mocks/attendanceMockData";
 
 import type {
@@ -80,7 +79,7 @@ function ListView() {
   useEffect(() => {
     const getClasses = async () => {
       const token =
-        localStorage.getItem("token");
+        sessionStorage.getItem("token");
 
       if (!token) {
         return;
@@ -137,6 +136,17 @@ function ListView() {
         row.classroom === selectedClass,
     );
   }, [selectedClass]);
+
+  const recentScanRows = useMemo(() => {
+  return [...classRows]
+    .filter((row) => row.checkIn !== null)
+    .sort((a, b) =>
+      (b.checkIn ?? "").localeCompare(
+        a.checkIn ?? "",
+      ),
+    )
+    .slice(0, 5);
+}, [classRows]);
 
   /*
    * Kennzahlen für die vier Dashboard-Karten.
@@ -221,18 +231,6 @@ function ListView() {
     searchTerm,
     statusFilter,
   ]);
-
-  /*
-   * RFID-Scans passend zur ausgewählten Klasse.
-   */
-  const recentRfidScans =
-    useMemo(() => {
-      return mockRecentRfidScans.filter(
-        (scan) =>
-          scan.classroom ===
-          selectedClass,
-      );
-    }, [selectedClass]);
 
   /*
    * Aktuell nur Frontend-Demo.
@@ -419,6 +417,7 @@ function ListView() {
 
           {/* Filter und Aktionen */}
           <div className="attendance-toolbar-card">
+            
             <div className="toolbar-field">
               <FormControl fullWidth>
                 <InputLabel>
@@ -433,30 +432,17 @@ function ListView() {
                   onChange={(
                     event,
                   ) =>
-                    setSelectedClass(
-                      event.target
-                        .value,
-                    )
+                    setSelectedClass(event.target.value)
                   }
                 >
-                  {classes.map(
-                    (
-                      classroom,
-                    ) => (
+                  {classes.map((classroom) => (
                       <MenuItem
-                        key={
-                          classroom
-                        }
-                        value={
-                          classroom
-                        }
+                        key={classroom}
+                        value={classroom}
                       >
-                        {
-                          classroom
-                        }
+                        {classroom}
                       </MenuItem>
-                    ),
-                  )}
+                  ))}
                 </Select>
               </FormControl>
             </div>
@@ -465,17 +451,10 @@ function ListView() {
               <TextField
                 label="Datum"
                 type="date"
-                value={
-                  selectedDate
-                }
+                value={selectedDate}
                 fullWidth
-                onChange={(
-                  event,
-                ) =>
-                  setSelectedDate(
-                    event.target
-                      .value,
-                  )
+                onChange={(event) =>
+                  setSelectedDate(event.target.value)
                 }
                 slotProps={{
                   inputLabel: {
@@ -485,37 +464,30 @@ function ListView() {
               />
             </div>
 
-            <Button
-              className="refresh-button"
-              variant="contained"
-              startIcon={
-                <RefreshOutlined />
-              }
-              onClick={
-                handleRefresh
-              }
-              disabled={
-                isRefreshing
-              }
-            >
-              {isRefreshing
-                ? "Wird aktualisiert..."
-                : "Anwesenheit aktualisieren"}
+            <div className="toolbar-actions">
+              <Button
+                className="refresh-button"
+                variant="contained"
+                startIcon={<RefreshOutlined />}
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                {isRefreshing
+                  ? "Wird aktualisiert..."
+                  : "Anwesenheit aktualisieren"}
             </Button>
 
             <Button
               className="export-button"
               variant="outlined"
-              startIcon={
-                <DownloadOutlined />
-              }
-              onClick={
-                handleExport
-              }
+              startIcon={<DownloadOutlined />}
+              onClick={handleExport}
             >
               Exportieren
             </Button>
           </div>
+
+        </div>
 
           {/* Kennzahlen */}
           <div className="stats-grid">
@@ -682,6 +654,10 @@ function ListView() {
                       },
                   },
                 }}
+                localeText={{
+                  paginationRowsPerPage: "Zeilen pro Seite:",
+                  noRowsLabel: "Keine Schüler vorhanden",
+                }}
                 sx={{
                   border: 0,
 
@@ -728,9 +704,7 @@ function ListView() {
         {/* Rechte Dashboard-Spalte */}
         <aside className="dashboard-side-column">
           <RecentRfidScans
-            scans={
-              recentRfidScans
-            }
+            rows={recentScanRows}
           />
 
           <InformationPanel
