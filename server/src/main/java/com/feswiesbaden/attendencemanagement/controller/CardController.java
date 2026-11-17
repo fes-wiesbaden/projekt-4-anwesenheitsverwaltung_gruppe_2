@@ -10,8 +10,6 @@ import com.feswiesbaden.attendencemanagement.repository.StudentRepository;
 import com.feswiesbaden.attendencemanagement.service.MqttService;
 import com.feswiesbaden.attendencemanagement.service.SetRfidService;
 import lombok.RequiredArgsConstructor;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;

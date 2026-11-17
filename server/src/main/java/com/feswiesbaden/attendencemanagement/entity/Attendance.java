@@ -5,7 +5,6 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Entity
 @AllArgsConstructor
@@ -26,7 +25,7 @@ public class Attendance {
 
     private Attendance_status status;
 
-    private String description;
+    private String reason;
 
     @ManyToOne
     @JoinColumn(name = "student_id")

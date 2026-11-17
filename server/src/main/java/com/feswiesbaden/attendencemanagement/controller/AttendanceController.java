@@ -78,4 +78,21 @@ public class AttendanceController {
         int checkedOut = attendanceService.checkoutClass(classroomId, targetDate);
         return ResponseEntity.ok("Checked out " + checkedOut + " students for " + targetDate);
     }
+
+    @PutMapping ("/edit/{attendanceId}")
+    public ResponseEntity<Attendance> EditAttendance(@PathVariable Long attendanceId, @RequestBody Attendance updatedAttendance) {
+        Optional<Attendance> optionalAttendance = attendanceRepository.findById(attendanceId);
+        if (optionalAttendance.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Attendance existingAttendance = optionalAttendance.get();
+        existingAttendance.setCheckin(updatedAttendance.getCheckin());
+        existingAttendance.setCheckout(updatedAttendance.getCheckout());
+        existingAttendance.setStatus(updatedAttendance.getStatus());
+        existingAttendance.setReason(updatedAttendance.getReason());
+
+        Attendance savedAttendance = attendanceRepository.save(existingAttendance);
+        return ResponseEntity.ok(savedAttendance);
+    }
 }
