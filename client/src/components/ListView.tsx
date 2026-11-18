@@ -36,8 +36,15 @@ import InformationPanel from "./dashboard/InformationPanel";
 
 import {
   mockAttendanceRows,
-  mockClassrooms,
 } from "../mocks/attendanceMockData";
+
+import {
+  getAvailableClassrooms,
+} from "../services/classroomService";
+
+import {
+  ApiError,
+} from "../api/http";
 
 import type {
   AttendanceStatus,
@@ -47,12 +54,10 @@ type StatusFilter = "ALL" | AttendanceStatus;
 
 function ListView() {
   const [classes, setClasses] =
-    useState<string[]>(mockClassrooms);
+    useState<string[]>([]);
 
   const [selectedClass, setSelectedClass] =
-    useState(
-      mockClassrooms[0] ?? "10A",
-    );
+   useState("");
 
   const [selectedDate, setSelectedDate] =
     useState(
@@ -76,56 +81,48 @@ function ListView() {
    * Solange dort keine Klassen vorhanden sind,
    * bleiben unsere Mock-Klassen sichtbar.
    */
-  useEffect(() => {
-    const getClasses = async () => {
-      const token =
-        sessionStorage.getItem("token");
 
-      if (!token) {
+  useEffect(() => {
+  const loadClasses = async () => {
+    try {
+      const data =
+        await getAvailableClassrooms();
+
+      setClasses(data);
+
+      if (data.length > 0) {
+        setSelectedClass(
+          (currentClass) =>
+            data.includes(currentClass)
+              ? currentClass
+              : data[0],
+        );
+      } else {
+        setSelectedClass("");
+      }
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        (error.status === 401 ||
+          error.status === 403)
+      ) {
+        sessionStorage.removeItem("token");
+        window.location.reload();
         return;
       }
 
-      try {
-        const response = await fetch(
-          "/api/classroom/allClassrooms",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            credentials: "include",
-          },
-        );
+      console.error(
+        "Klassen konnten nicht geladen werden.",
+        error,
+      );
 
-        if (!response.ok) {
-          throw new Error(
-            "Klassen konnten nicht geladen werden.",
-          );
-        }
+      setClasses([]);
+      setSelectedClass("");
+    }
+  };
 
-        const data: string[] =
-          await response.json();
-
-        if (data.length > 0) {
-          setClasses(data);
-
-          setSelectedClass(
-            (currentClass) =>
-              data.includes(currentClass)
-                ? currentClass
-                : data[0],
-          );
-        }
-      } catch (error) {
-        console.warn(
-          "Backend-Klassen nicht verfügbar. Mock-Daten werden verwendet.",
-          error,
-        );
-      }
-    };
-
-    void getClasses();
-  }, []);
+  void loadClasses();
+}, []);
 
   /*
    * Schüler der aktuell ausgewählten Klasse.
