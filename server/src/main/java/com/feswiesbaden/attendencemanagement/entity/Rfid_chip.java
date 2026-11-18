@@ -22,6 +22,9 @@ public class Rfid_chip {
 
     private String chipId;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
     @JsonIgnore
     @OneToOne(mappedBy = "rfidChip")
     private Student student;

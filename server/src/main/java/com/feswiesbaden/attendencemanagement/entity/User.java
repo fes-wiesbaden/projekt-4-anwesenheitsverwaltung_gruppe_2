@@ -4,8 +4,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-import static com.feswiesbaden.attendencemanagement.entity.Role.USER;
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -37,13 +35,12 @@ public class User {
     private LocalDate createdAt;
 
     @Enumerated(EnumType.STRING)
-    private Role role = USER;
+    private Role role = Role.TEACHER;
 
     @OneToOne
     @JoinColumn(name = "classroom_id", unique = true)
-    private Classroom myClassroom; //Klassen-Lehrer
+    private Classroom myClassroom;
 
     @ManyToMany(mappedBy = "teachers")
-    private List<Classroom> classes;//Alle Klassen die unterrichtet werden.
-
+    private List<Classroom> classes;
 }
