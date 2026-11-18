@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  Alert,
   Box,
   Button,
   FormControl,
@@ -35,8 +36,23 @@ import RecentRfidScans from "./dashboard/RecentRfidScans";
 import InformationPanel from "./dashboard/InformationPanel";
 
 import {
-  mockAttendanceRows,
-} from "../mocks/attendanceMockData";
+  getAttendanceForDay,
+} from "../services/attendanceService";
+
+import {
+  getStudentsOfClass,
+} from "../services/studentService";
+
+import {
+  buildAttendanceRows,
+  computeStats,
+  formatPercent,
+} from "../mappers/attendanceMapper";
+
+import type {
+  AttendanceRow,
+  AttendanceStatus,
+} from "../types/attendance";
 
 import {
   getAvailableClassrooms,
@@ -46,10 +62,6 @@ import {
   ApiError,
 } from "../api/http";
 
-import type {
-  AttendanceStatus,
-} from "../types/attendance";
-
 type StatusFilter = "ALL" | AttendanceStatus;
 
 function ListView() {
@@ -57,15 +69,12 @@ function ListView() {
     useState<string[]>([]);
 
   const [selectedClass, setSelectedClass] =
-   useState("");
+    useState("");
 
   const [selectedDate, setSelectedDate] =
-    useState(
-      () =>
-        new Date()
-          .toISOString()
-          .slice(0, 10),
-    );
+    useState(() =>
+      new Date().toLocaleDateString("sv-SE"),
+  );
 
   const [searchTerm, setSearchTerm] =
     useState("");
@@ -73,14 +82,21 @@ function ListView() {
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("ALL");
 
-  const [isRefreshing, setIsRefreshing] =
+  const [classRows, setClassRows] =
+    useState<AttendanceRow[]>([]);
+
+  const [isLoading, setIsLoading] =
     useState(false);
 
-  /*
-   * Bereits vorhandene Klassen aus dem Backend verwenden.
-   * Solange dort keine Klassen vorhanden sind,
-   * bleiben unsere Mock-Klassen sichtbar.
-   */
+  const [loadError, setLoadError] =
+    useState<string | null>(null);
+
+  const [reloadKey, setReloadKey] =
+    useState(0);
+    
+/*
+ * Klassen aus dem Backend laden.
+ */
 
   useEffect(() => {
   const loadClasses = async () => {
@@ -127,12 +143,83 @@ function ListView() {
   /*
    * Schüler der aktuell ausgewählten Klasse.
    */
-  const classRows = useMemo(() => {
-    return mockAttendanceRows.filter(
-      (row) =>
-        row.classroom === selectedClass,
-    );
-  }, [selectedClass]);
+
+  useEffect(() => {
+    if (!selectedClass) {
+      setClassRows([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAttendanceData = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        const [students, records] =
+          await Promise.all([
+            getStudentsOfClass(
+              selectedClass,
+            ),
+            getAttendanceForDay(
+              selectedClass,
+              selectedDate,
+            ),
+          ]);
+
+        if (!cancelled) {
+          setClassRows(
+            buildAttendanceRows(
+              students,
+              records,
+              selectedClass,
+            ),
+          );
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        if (
+          error instanceof ApiError &&
+          (error.status === 401 ||
+            error.status === 403)
+        ) {
+          sessionStorage.removeItem(
+            "token",
+          );
+          window.location.reload();
+          return;
+        }
+
+        console.error(
+          "Anwesenheitsdaten konnten nicht geladen werden.",
+          error,
+        );
+
+        setClassRows([]);
+        setLoadError(
+          "Anwesenheitsdaten konnten nicht geladen werden.",
+        );
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadAttendanceData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedClass,
+    selectedDate,
+    reloadKey,
+  ]);
 
   const recentScanRows = useMemo(() => {
   return [...classRows]
@@ -149,47 +236,29 @@ function ListView() {
    * Kennzahlen für die vier Dashboard-Karten.
    */
   const statistics = useMemo(() => {
-    const total = classRows.length;
-
-    const present =
-      classRows.filter(
-        (row) =>
-          row.status === "PRESENT",
-      ).length;
-
-    const late =
-      classRows.filter(
-        (row) =>
-          row.status === "LATE",
-      ).length;
-
-    const absent =
-      classRows.filter(
-        (row) =>
-          row.status === "ABSENT",
-      ).length;
-
-    const percentage = (
-      value: number,
-    ) =>
-      total === 0
-        ? "0 %"
-        : `${(
-            (value / total) *
-            100
-          ).toFixed(1)} %`;
+    const result =
+      computeStats(classRows);
 
     return {
-      total,
-      present,
-      late,
-      absent,
+      ...result,
+
       presentPercentage:
-        percentage(present),
+        formatPercent(
+          result.present,
+          result.total,
+        ),
+
       latePercentage:
-        percentage(late),
+        formatPercent(
+          result.late,
+          result.total,
+        ),
+
       absentPercentage:
-        percentage(absent),
+        formatPercent(
+          result.absent,
+          result.total,
+        ),
     };
   }, [classRows]);
 
@@ -229,17 +298,14 @@ function ListView() {
     statusFilter,
   ]);
 
-  /*
-   * Aktuell nur Frontend-Demo.
-   * Später wird hier die echte API
-   * zum Aktualisieren aufgerufen.
-   */
+ /*
+  * Anwesenheitsdaten erneut vom Backend laden.
+  */
+ 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-
-    window.setTimeout(() => {
-      setIsRefreshing(false);
-    }, 600);
+    setReloadKey(
+      (current) => current + 1,
+    );
   };
 
   const getStatusLabel = (
@@ -254,6 +320,9 @@ function ListView() {
 
       case "ABSENT":
         return "Abwesend";
+
+      case "NOT_RECORDED":
+        return "Nicht erfasst";
 
       default:
         return "Unbekannt";
@@ -467,9 +536,9 @@ function ListView() {
                 variant="contained"
                 startIcon={<RefreshOutlined />}
                 onClick={handleRefresh}
-                disabled={isRefreshing}
+                disabled={isLoading}
               >
-                {isRefreshing
+                {isLoading
                   ? "Wird aktualisiert..."
                   : "Anwesenheit aktualisieren"}
             </Button>
@@ -485,6 +554,12 @@ function ListView() {
           </div>
 
         </div>
+
+        {loadError && (
+          <Alert severity="error">
+            {loadError}
+          </Alert>
+        )}
 
           {/* Kennzahlen */}
           <div className="stats-grid">
@@ -618,6 +693,10 @@ function ListView() {
                     <MenuItem value="ABSENT">
                       Abwesend
                     </MenuItem>
+
+                    <MenuItem value="NOT_RECORDED">
+                      Nicht erfasst
+                    </MenuItem>
                   </Select>
                 </FormControl>
               </div>
@@ -631,12 +710,9 @@ function ListView() {
               }}
             >
               <DataGrid
-                rows={
-                  filteredRows
-                }
-                columns={
-                  columns
-                }
+                loading={isLoading}
+                rows={filteredRows}
+                columns={columns}
                 disableRowSelectionOnClick
                 pageSizeOptions={[
                   10,
