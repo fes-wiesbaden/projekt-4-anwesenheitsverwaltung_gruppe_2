@@ -45,15 +45,11 @@ export function buildAttendanceRows(
     new Map<string, ApiAttendanceRecord>();
 
   for (const record of records) {
-    const current =
-      latestRecordByStudent.get(
-        record.studentId,
-      );
+    const current = latestRecordByStudent.get(
+      record.studentId,
+    );
 
-    if (
-      !current ||
-      record.id > current.id
-    ) {
+    if (!current || record.id > current.id) {
       latestRecordByStudent.set(
         record.studentId,
         record,
@@ -63,21 +59,23 @@ export function buildAttendanceRows(
 
   return students
     .map((student) => {
-      const record =
-        latestRecordByStudent.get(
-          student.id,
-        );
+      const record = latestRecordByStudent.get(
+        student.id,
+      );
 
       return {
         studentId: student.id,
-        studentName:
-          student.displayName,
+        studentName: student.displayName,
         classroom: classroomName,
         status: mapStatus(record),
-        checkIn:
-          formatTime(record?.checkin),
-        checkOut:
-          formatTime(record?.checkout),
+
+        checkIn: formatTime(record?.checkin),
+        checkOut: formatTime(record?.checkout),
+
+        attendanceId: record?.id ?? null,
+        description: record?.description ?? null,
+        checkInRaw: record?.checkin ?? null,
+        checkOutRaw: record?.checkout ?? null,
       };
     })
     .sort((a, b) =>
@@ -91,6 +89,7 @@ export function buildAttendanceRows(
       id: index + 1,
     }));
 }
+
 
 export interface AttendanceStats {
   total: number;
@@ -106,8 +105,7 @@ export function computeStats(
     status: AttendanceStatus,
   ) =>
     rows.filter(
-      (row) =>
-        row.status === status,
+      (row) => row.status === status,
     ).length;
 
   return {
@@ -133,3 +131,4 @@ export function formatPercent(
     100
   ).toFixed(1)} %`;
 }
+

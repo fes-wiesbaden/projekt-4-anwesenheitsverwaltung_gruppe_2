@@ -12,4 +12,10 @@ export interface AttendanceRow {
   status: AttendanceStatus;
   checkIn: string | null;
   checkOut: string | null;
+
+  // Zusätzliche Daten für das Bearbeiten
+  attendanceId: number | null;
+  description: string | null;
+  checkInRaw: string | null;
+  checkOutRaw: string | null;
 }

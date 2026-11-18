@@ -224,4 +224,45 @@ describe("computeStats", () => {
       formatPercent(0, 0),
     ).toBe("0 %");
   });
+
+  it("übernimmt die Daten für das Bearbeiten", () => {
+    const rows = buildAttendanceRows(
+      [student("1", "Anna Müller")],
+      [
+        {
+          ...attendance(
+            7,
+            "1",
+            "VERSPAETET",
+            "2026-11-18T08:15:00.123456",
+          ),
+          checkout: "2026-11-18T09:00:00",
+          description: "Arzttermin",
+        },
+      ],
+      "10A",
+    );
+
+    expect(rows[0].attendanceId).toBe(7);
+    expect(rows[0].description).toBe("Arzttermin");
+    expect(rows[0].checkInRaw).toBe(
+      "2026-11-18T08:15:00.123456",
+    );
+    expect(rows[0].checkOutRaw).toBe(
+      "2026-11-18T09:00:00",
+    );
+  });
+
+  it("setzt neue Felder ohne Datensatz auf null", () => {
+    const rows = buildAttendanceRows(
+      [student("1", "Anna Müller")],
+      [],
+      "10A",
+    );
+
+    expect(rows[0].attendanceId).toBeNull();
+    expect(rows[0].description).toBeNull();
+    expect(rows[0].checkInRaw).toBeNull();
+    expect(rows[0].checkOutRaw).toBeNull();
+  });
 });
