@@ -11,6 +11,7 @@ import com.feswiesbaden.attendencemanagement.entity.Role;
 import com.feswiesbaden.attendencemanagement.entity.User;
 import com.feswiesbaden.attendencemanagement.exceptions.ClassroomNotFoundException;
 import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
+import com.feswiesbaden.attendencemanagement.repository.AttendanceSessionRepository;
 import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 public class ClassroomService {
     private final ClassroomRepository classroomRepository;
     private final AttendanceRepository attendanceRepository;
+    private final AttendanceSessionRepository sessionRepository;
 
     public Classroom findById(Long id) {
         return classroomRepository.findById(id)
@@ -36,15 +38,19 @@ public class ClassroomService {
     }
 
     public boolean hasAccess(User user, Classroom classroom) {
-        return user.getRole() == Role.ADMIN || isOwner(user, classroom)
-                || classroom.getTeachers().stream().anyMatch(t -> t.getId().equals(user.getId()));
+        if (user == null || classroom == null) return false;
+        if (user.getRole() == Role.ADMIN) return true;
+        if (isOwner(user, classroom)) return true;
+        return classroom.getTeachers() != null && classroom.getTeachers().stream()
+                .anyMatch(t -> t.getId().equals(user.getId()));
     }
 
     public List<Attendance> getAttendances(String className, LocalDate date) {
         Classroom classroom = classroomRepository.findByClassroomName(className)
                 .orElseThrow(() -> new ClassroomNotFoundException(className));
 
-        return attendanceRepository.findByStudent_ClassroomAndCheckinBetween(
-                classroom, date.atStartOfDay(), date.atTime(23, 59, 59));
+        return sessionRepository.findDetailedBySessionDateAndClassroom(date, classroom.getId())
+                .map(session -> attendanceRepository.findBySession_Id(session.getId()))
+                .orElseGet(() -> attendanceRepository.findByStudent_ClassroomAndDate(classroom, date));
     }
 }
