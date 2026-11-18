@@ -29,6 +29,9 @@ public class Timetable {
     @Column(nullable = false)
     private DayOfWeek dayOfWeek;
 
-    @Column(nullable = false)
+    @Column(name = "start_time", nullable = false)
+    private LocalTime startTime;
+
+    @Column(name = "checkout_time", nullable = false)
     private LocalTime checkoutTime;
 }
