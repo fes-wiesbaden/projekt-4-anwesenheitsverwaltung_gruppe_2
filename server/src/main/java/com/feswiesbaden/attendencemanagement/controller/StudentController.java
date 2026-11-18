@@ -11,6 +11,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.feswiesbaden.attendencemanagement.entity.Student;
 import com.feswiesbaden.attendencemanagement.repository.StudentRepository;
+import com.feswiesbaden.attendencemanagement.repository.UserRepository;
+import com.feswiesbaden.attendencemanagement.entity.User;
+import com.feswiesbaden.attendencemanagement.entity.Role;
+import com.feswiesbaden.attendencemanagement.service.ClassroomService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,6 +25,8 @@ public class StudentController {
 
     
     private final StudentRepository studentRepository;
+    private final UserRepository userRepository;
+    private final ClassroomService classroomService;
 
    
     @GetMapping("/students")
@@ -29,14 +35,23 @@ public class StudentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Student> GetStudent(@PathVariable UUID id) {
-        return studentRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<Student> GetStudent(@PathVariable UUID id, Authentication authentication) {
+        User user = userRepository.findByUsername(authentication.getName());
+        if (user == null) return ResponseEntity.status(401).build();
+        Student student = studentRepository.findById(id).orElse(null);
+        if (student == null) return ResponseEntity.notFound().build();
+        if (user.getRole() != Role.ADMIN
+                && (student.getClassroom() == null || !classroomService.hasAccess(user, student.getClassroom()))) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(student);
     }
 
     @GetMapping("myStudents")
     public ResponseEntity<List<Student>> GetMyStudents(Authentication authentication){
+        User user = userRepository.findByUsername(authentication.getName());
+        if (user == null) return ResponseEntity.status(401).build();
+        if (user.getRole() == Role.ADMIN) return ResponseEntity.ok(studentRepository.findAll());
         return ResponseEntity.ok(studentRepository.findStudentsByTeacherUsername(authentication.getName()));
     }
 
