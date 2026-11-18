@@ -30,7 +30,7 @@ public class Attendance {
     // Kept as the existing ordinal enum mapping for compatibility with existing rows.
     private Attendance_status status;
 
-    private String description;
+    private String reason;
 
     @Column(name = "checkout_reason", length = 200)
     private String checkoutReason;
