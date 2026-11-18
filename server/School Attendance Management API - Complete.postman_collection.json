@@ -1,0 +1,1491 @@
+{
+  "info": {
+    "_postman_id": "7b2c3918-2a64-489a-8350-888a6323296d",
+    "name": "School Attendance Management API - Complete",
+    "description": "Complete Postman collection generated from the Spring Boot backend controllers in server-attendance-implementation.zip.\n\nIncludes every HTTP controller operation: authentication (3), admin (7), rooms/classrooms (8), students (3), RFID (7), timetable (3), attendance (8), total 39 requests.\n\nQUICK START\n1. Import this collection and the companion environment JSON.\n2. Select the environment and set baseUrl if your server is not http://localhost:4200.\n3. Set loginUsername/loginPassword. The supplied application.properties defaults are admin/admin only when those environment overrides are not set.\n4. Run 00 - Authentication / Login. The JWT response.token is saved to authToken automatically.\n5. Use admin credentials for admin setup endpoints. Then log in as a teacher to test teacher-scoped routes; each login replaces authToken.\n6. Create a room, create a classroom, manually set classroomId if not available from the current API response, create students, assign students, configure timetable, enroll RFID, assign the chip and test attendance.\n\nIMPORTANT BACKEND-SPECIFIC NOTES\n- This collection contains all HTTP REST controller mappings, not MQTT topics. The ESP32's RFID scan path uses Mosquitto, not an HTTP endpoint.\n- POST /api/attendance/checkin/{studentId} is an ADMIN-only manual check-in endpoint. Normal RFID check-ins are received through MQTT.\n- MQTT topics (from MqttService): server publishes attendance/server/setRfid (JSON {requestId}); server subscribes attendance/reader/set (JSON {requestId,uid} or legacy plain UID) and attendance/reader/scan (plain UID). Server publishes attendance/server/setResult, attendance/server/scanResult and attendance/server/status.\n- RFID status polling requires the ESP32 to publish the result to attendance/reader/set after the admin starts enrollment.\n- Timetable writes require startTime and checkoutTime in HH:mm:ss format. Day path variable is an uppercase Java DayOfWeek name.\n- School-local date defaults to Europe/Berlin. Collection pre-request script provides {{today}} for read/attendance-day requests.\n- POST /api/auth/admin/createUser expects displayname (lowercase field name), username, password and optional role. Supported roles are ADMIN and TEACHER; omitting role defaults to TEACHER.\n- POST /api/classroom currently returns only \"Classroom Created!\", not the created ID. Set environment variable classroomId manually after creating the classroom. GET /api/classroom/my can populate it for a user whose myClassroom was set with assignMyClassroom.\n- POST /api/attendance/student/{id} is a legacy duplicate of the GET read operation; GET is preferred.\n- Logout returns LoggedOut=true but does not revoke a stateless JWT on the server; clear authToken manually or run a new login.\n- Optional date query parameters on the checkout/session requests are disabled by default; the backend defaults to the school-local current date.\n\nExpected status codes and role requirements are described on each request.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "39409072"
+  },
+  "item": [
+    {
+      "name": "00 - Authentication",
+      "item": [
+        {
+          "name": "Login (saves JWT automatically)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login returns 200\", function () { pm.response.to.have.status(200); });",
+                  "let data = {};",
+                  "try { data = pm.response.json(); } catch (e) { /* Empty body on failed login is valid API behavior. */ }",
+                  "if (data && data.token) {",
+                  "  pm.environment.set(\"authToken\", data.token);",
+                  "  pm.test(\"JWT token saved to authToken\", function () { pm.expect(data.token).to.be.a(\"string\").and.not.empty; });",
+                  "} else {",
+                  "  pm.test(\"Response contains token\", function () { pm.expect(data && data.token, \"Expected { token: ... }\").to.exist; });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{loginUsername}}\",\n  \"password\": \"{{loginPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Public endpoint. Uses loginUsername/loginPassword environment variables. On HTTP 200, the test script saves response.token into authToken for all subsequent requests. Default credentials in the supplied application.properties are admin/admin unless overridden by deployment environment variables."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Authenticated endpoint. This API currently returns LoggedOut=true; JWTs are stateless and are not revoked server-side. Clear authToken in the environment when finished."
+          },
+          "response": []
+        },
+        {
+          "name": "Change password on first login",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"{{oldPassword}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/changePasswordOnFirstLogin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "changePasswordOnFirstLogin"
+              ]
+            },
+            "description": "Authenticated. Changes the password for the currently authenticated user. New password must be at least 10 characters. The old password must match."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01 - Admin - Users and students",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:4200/api/auth/admin/users",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4200",
+              "path": [
+                "api",
+                "auth",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "ADMIN only. Returns safe user DTOs including id, displayName, username, createdAt and role."
+          },
+          "response": []
+        },
+        {
+          "name": "Create user (teacher by default)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data && data.id) pm.environment.set(\"teacherUserId\", data.id);",
+                  "if (data && data.username) pm.environment.set(\"teacherUsername\", data.username);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayname\": \"{{teacherDisplayName}}\",\n  \"username\": \"{{teacherUsername}}\",\n  \"password\": \"{{teacherPassword}}\",\n  \"role\": \"TEACHER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/admin/createUser",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "admin",
+                "createUser"
+              ]
+            },
+            "description": "ADMIN only. Password must be at least 10 characters. Omit role or use TEACHER for a teacher account; supported application roles are ADMIN and TEACHER. Note the DTO field is displayname (all lowercase)."
+          },
+          "response": []
+        },
+        {
+          "name": "Assign teacher to classroom (many-to-many)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{teacherUsername}}\",\n  \"classroomId\": \"{{classroomId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/admin/assign-class",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "admin",
+                "assign-class"
+              ]
+            },
+            "description": "ADMIN only. Adds the selected TEACHER to a classroom teacher list. Requires a valid classroomId. Use the username of an account with role TEACHER."
+          },
+          "response": []
+        },
+        {
+          "name": "Set teacher primary classroom",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{teacherUsername}}\",\n  \"classroomId\": \"{{classroomId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/admin/assignMyClassroom",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "admin",
+                "assignMyClassroom"
+              ]
+            },
+            "description": "ADMIN only. Sets the teacher account myClassroom field. This supports GET /api/classroom/my. Requires a valid classroomId."
+          },
+          "response": []
+        },
+        {
+          "name": "Create student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data && data.id) pm.environment.set(\"studentId\", data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"displayName\": \"{{studentDisplayName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/admin/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "admin",
+                "create"
+              ]
+            },
+            "description": "ADMIN only. Students are records, not login accounts. Successful response includes id and username; id is saved to studentId."
+          },
+          "response": []
+        },
+        {
+          "name": "Update student",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{studentUsername}}\",\n  \"displayName\": \"{{studentDisplayName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/admin/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "admin",
+                "{{studentId}}"
+              ]
+            },
+            "description": "ADMIN only. Replaces the student username/displayName values. Use an existing studentId."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete student",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/admin/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "admin",
+                "{{studentId}}"
+              ]
+            },
+            "description": "ADMIN only. Returns 204 on success. Returns 409 when attendance history exists; preserve historical attendance instead of deleting that student."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Rooms and classrooms",
+      "item": [
+        {
+          "name": "Create room",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data && data.id !== undefined) pm.environment.set(\"roomId\", data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"RoomName\": \"{{roomName}}\",\n  \"RoomNumber\": \"{{roomNumber}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/room/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "room",
+                "create"
+              ]
+            },
+            "description": "ADMIN only. Creates a room. Successful response is a Room entity; id is saved to roomId."
+          },
+          "response": []
+        },
+        {
+          "name": "List rooms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/room/getall",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "room",
+                "getall"
+              ]
+            },
+            "description": "Authenticated. Lists all rooms; use an id from this response as roomId."
+          },
+          "response": []
+        },
+        {
+          "name": "Get room by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/room/{{roomId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "room",
+                "{{roomId}}"
+              ]
+            },
+            "description": "Authenticated. Returns one room or 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Create classroom",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classroomName\": \"{{classroomName}}\",\n  \"roomId\": \"{{roomId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classroom",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classroom"
+              ]
+            },
+            "description": "ADMIN only. Creates a classroom in the selected room. Current controller returns the text \"Classroom Created!\" rather than the new classroom ID, so set classroomId manually from the database/admin tooling. The API has no list-all-classrooms-with-IDs endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Assign student to classroom",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classroom/{{studentId}}/{{classroomId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classroom",
+                "{{studentId}}",
+                "{{classroomId}}"
+              ]
+            },
+            "description": "Authenticated. ADMIN can assign students; a TEACHER must have access to the target classroom. The path order is studentId first, classroomId second."
+          },
+          "response": []
+        },
+        {
+          "name": "Get my classroom",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data && data.id !== undefined) pm.environment.set(\"classroomId\", data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classroom/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classroom",
+                "my"
+              ]
+            },
+            "description": "Authenticated. Returns the current user primary classroom or 404 if myClassroom has not been assigned. When returned, this request saves its id as classroomId."
+          },
+          "response": []
+        },
+        {
+          "name": "List classroom names accessible to current user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classroom/allClassrooms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classroom",
+                "allClassrooms"
+              ]
+            },
+            "description": "Authenticated. ADMIN receives all classroom names; TEACHER receives classroom names available to them. Response is a list of names, not IDs."
+          },
+          "response": []
+        },
+        {
+          "name": "Get attendance for classroom and date",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classroom/AttendanceDay?classname={{classroomName}}&date={{today}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classroom",
+                "AttendanceDay"
+              ],
+              "query": [
+                {
+                  "key": "classname",
+                  "value": "{{classroomName}}",
+                  "description": "Exact classroom name"
+                },
+                {
+                  "key": "date",
+                  "value": "{{today}}",
+                  "description": "ISO date; today is set by collection pre-request script"
+                }
+              ]
+            },
+            "description": "Authenticated. Teacher must have access to the named classroom. Returns attendance records for that classroom/date. Uses query parameter classname and ISO date (YYYY-MM-DD)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Students",
+      "item": [
+        {
+          "name": "List all students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/student/students",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "student",
+                "students"
+              ]
+            },
+            "description": "ADMIN only. Lists every student."
+          },
+          "response": []
+        },
+        {
+          "name": "Get student by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/student/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "student",
+                "{{studentId}}"
+              ]
+            },
+            "description": "Authenticated. ADMIN can read any student; TEACHER is restricted to students in a classroom they can access."
+          },
+          "response": []
+        },
+        {
+          "name": "List my students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/student/myStudents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "student",
+                "myStudents"
+              ]
+            },
+            "description": "Authenticated. ADMIN receives all students; TEACHER receives students belonging to their assigned classroom(s)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - RFID",
+      "item": [
+        {
+          "name": "Start RFID enrollment (asks ESP32 to read a card)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data && data.requestId) pm.environment.set(\"rfidRequestId\", data.requestId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rfid/set",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rfid",
+                "set"
+              ]
+            },
+            "description": "ADMIN only. Sends enrollment request to MQTT topic attendance/server/setRfid. Response normally 202 {requestId,status:\"PENDING\"}; requestId saved to rfidRequestId. The ESP32 must publish the captured UID to attendance/reader/set. This endpoint does not take a request body."
+          },
+          "response": []
+        },
+        {
+          "name": "Get RFID enrollment status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rfid/set/status/{{rfidRequestId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rfid",
+                "set",
+                "status",
+                "{{rfidRequestId}}"
+              ]
+            },
+            "description": "ADMIN only. Poll this after scanning the chip on the ESP32. Expect PENDING, SAVED, DUPLICATE, INVALID, TIMEOUT or FAILED.; 404 means requestId is unknown/expired."
+          },
+          "response": []
+        },
+        {
+          "name": "List RFID cards",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rfid/getall",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rfid",
+                "getall"
+              ]
+            },
+            "description": "ADMIN only. Lists registered cards with id, normalized chipId, and active state. Use card id (UUID) for rfidId."
+          },
+          "response": []
+        },
+        {
+          "name": "Get RFID card by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rfid/{{rfidId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rfid",
+                "{{rfidId}}"
+              ]
+            },
+            "description": "ADMIN only. Returns one RFID card by its database UUID, not its chip UID."
+          },
+          "response": []
+        },
+        {
+          "name": "Assign RFID card to student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"rfid_Id\": \"{{rfidId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/rfid/assign-rfid",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rfid",
+                "assign-rfid"
+              ]
+            },
+            "description": "ADMIN only. Assigns a registered, active card to a student. Both IDs are database UUIDs. A card already assigned to another student, inactive card, or student with another card returns 409."
+          },
+          "response": []
+        },
+        {
+          "name": "Unassign RFID card from student",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rfid/assign/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rfid",
+                "assign",
+                "{{studentId}}"
+              ]
+            },
+            "description": "ADMIN only. Removes the card assignment from the student; it does not delete the card record."
+          },
+          "response": []
+        },
+        {
+          "name": "Activate/deactivate RFID card",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rfid/{{rfidId}}/active?active=false",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rfid",
+                "{{rfidId}}",
+                "active"
+              ],
+              "query": [
+                {
+                  "key": "active",
+                  "value": "false",
+                  "description": "Boolean query parameter"
+                }
+              ]
+            },
+            "description": "ADMIN only. Set active=true to activate or active=false to deactivate a lost/replaced card."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 - Timetable",
+      "item": [
+        {
+          "name": "Get classroom timetable",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classroom/{{classroomId}}/timetable",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classroom",
+                "{{classroomId}}",
+                "timetable"
+              ]
+            },
+            "description": "Authenticated. ADMIN or a teacher with access to this classroom. Returns configured weekday entries."
+          },
+          "response": []
+        },
+        {
+          "name": "Set or update weekday timetable",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"08:00:00\",\n  \"checkoutTime\": \"14:00:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/classroom/{{classroomId}}/timetable/{{timetableDay}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classroom",
+                "{{classroomId}}",
+                "timetable",
+                "{{timetableDay}}"
+              ]
+            },
+            "description": "ADMIN only. timetableDay must be MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY or SUNDAY. Times are LocalTime strings HH:mm:ss; checkoutTime must be later than startTime."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete weekday timetable",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/classroom/{{classroomId}}/timetable/{{timetableDay}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "classroom",
+                "{{classroomId}}",
+                "timetable",
+                "{{timetableDay}}"
+              ]
+            },
+            "description": "ADMIN only. Returns 204. Can return 409 if deleting this timetable entry is blocked by related session history."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 - Attendance",
+      "item": [
+        {
+          "name": "Manual check-in student (ADMIN only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/checkin/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "checkin",
+                "{{studentId}}"
+              ]
+            },
+            "description": "ADMIN only manual check-in API. Normal RFID card scans are processed by MQTT, not by this HTTP endpoint. Requires the student to belong to a class with an active timetable session."
+          },
+          "response": []
+        },
+        {
+          "name": "Get attendance history by student (GET)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/student/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "student",
+                "{{studentId}}"
+              ]
+            },
+            "description": "Authenticated. ADMIN can read any student; TEACHER only students in an accessible classroom. This endpoint returns attendance records."
+          },
+          "response": []
+        },
+        {
+          "name": "Get attendance history by student (legacy POST)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/student/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "student",
+                "{{studentId}}"
+              ]
+            },
+            "description": "Legacy compatibility route: POST performs the same read as GET and does not require a request body. Prefer the GET request."
+          },
+          "response": []
+        },
+        {
+          "name": "Release one student early",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/student/{{studentId}}/checkout?reason=Parent pickup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "student",
+                "{{studentId}}",
+                "checkout"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{today}}",
+                  "description": "Optional ISO date; defaults to school-local today",
+                  "disabled": true
+                },
+                {
+                  "key": "reason",
+                  "value": "Parent pickup",
+                  "description": "Optional release reason"
+                }
+              ]
+            },
+            "description": "Authenticated; ADMIN or teacher with access to the student classroom. Releases a checked-in student from the active session. Optional date defaults to school-local today; reason is recorded in the attendance description and audit trail."
+          },
+          "response": []
+        },
+        {
+          "name": "Release entire class early",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/class/{{classroomId}}/checkout?reason=Class dismissed early",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "class",
+                "{{classroomId}}",
+                "checkout"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{today}}",
+                  "description": "Optional ISO date; defaults to school-local today",
+                  "disabled": true
+                },
+                {
+                  "key": "reason",
+                  "value": "Class dismissed early",
+                  "description": "Optional release reason"
+                }
+              ]
+            },
+            "description": "Authenticated; ADMIN or teacher with access to classroom. Checks out all checked-in students and closes the session. Also closes the session if nobody checked in. Optional date defaults to school-local today."
+          },
+          "response": []
+        },
+        {
+          "name": "Get classroom attendance session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data && data.id !== undefined) pm.environment.set(\"sessionId\", data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/class/{{classroomId}}/session",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "class",
+                "{{classroomId}}",
+                "session"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{today}}",
+                  "description": "Optional ISO date; defaults to school-local today",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Authenticated; ADMIN or teacher with access to classroom. Returns 404 if no session has been created for the selected date. The scheduler creates the session when timetable start is reached; RFID scan can also create it at/after start while the session is active."
+          },
+          "response": []
+        },
+        {
+          "name": "Get session attendance roster",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/class/{{classroomId}}/session/attendance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "class",
+                "{{classroomId}}",
+                "session",
+                "attendance"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{today}}",
+                  "description": "Optional ISO date; defaults to school-local today",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Authenticated; ADMIN or teacher with access to classroom. Returns roster rows for the session, including seeded ABSENT records and attendance/check-out details."
+          },
+          "response": []
+        },
+        {
+          "name": "Get session audit history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/attendance/session/{{sessionId}}/audit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "session",
+                "{{sessionId}}",
+                "audit"
+              ]
+            },
+            "description": "Authenticated; ADMIN or teacher with access to the session classroom. Returns audit events such as RFID check-in, manual check-in, early release and automatic timetable-end checkout."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/dashboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "dashboard"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Daily attendance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/attendance/daily?date=2026-11-18",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "attendance",
+                "daily"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-11-18"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Weekly attendance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/attendance/weekly?from=2026-11-09&to=2026-11-15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "attendance",
+                "weekly"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-11-09"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-15"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Monthly attendance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/attendance/monthly?from=2026-11-01&to=2026-11-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "attendance",
+                "monthly"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-11-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-30"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Class attendance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/attendance/class/{{classId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "attendance",
+                "class",
+                "{{classId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Student attendance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/attendance/student/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "attendance",
+                "student",
+                "{{studentId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Absences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/absences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "absences"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Late arrivals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/late-arrivals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "late-arrivals"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Early departures",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/early-departures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                "early-departures"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Audit logs (Admin only)",
+      "item": [
+        {
+          "name": "List system activity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit-logs"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get activity details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs/{{auditId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit-logs",
+                "{{auditId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "User activity history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit-logs",
+                "users",
+                "{{userId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const zone = pm.environment.get(\"attendanceZone\") || \"Europe/Berlin\";",
+          "const parts = new Intl.DateTimeFormat(\"en-CA\", { timeZone: zone, year: \"numeric\", month: \"2-digit\", day: \"2-digit\" }).format(new Date());",
+          "pm.variables.set(\"today\", parts);"
+        ]
+      }
+    }
+  ]
+}
