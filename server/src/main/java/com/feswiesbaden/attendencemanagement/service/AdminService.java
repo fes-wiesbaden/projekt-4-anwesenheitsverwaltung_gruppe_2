@@ -2,6 +2,8 @@ package com.feswiesbaden.attendencemanagement.service;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import java.time.LocalDate;
+import java.util.List;
 
 import com.feswiesbaden.attendencemanagement.dto.requests.RegisterDto;
 import com.feswiesbaden.attendencemanagement.entity.Classroom;
@@ -30,6 +32,9 @@ public class AdminService {
     }
 
     public User addClassroom(User user, Classroom classroom) {
+        if (classroom.getTeachers() == null) {
+            classroom.setTeachers(new java.util.ArrayList<>());
+        }
         boolean alreadyTeacher = classroom.getTeachers().stream()
                 .anyMatch(t -> t.getId().equals(user.getId()));
         if (!alreadyTeacher) {
@@ -44,32 +49,24 @@ public class AdminService {
         return userRepository.save(user);
     }
 
-    public User createUser(RegisterDto registerDto) {
-        User user = new User();
-        String defaultPassword = passwordEncoder.encode(generateDefaultPassword(12));
-        user.setUsername(registerDto.getUsername());
-        user.setDisplayName(registerDto.getDisplayname());
-        user.setPassword(defaultPassword);
-        user.setRole(registerDto.getRole());
-        user.setFirstLogin(true);
-       
-        return userRepository.save(user);
+    public boolean usernameExists(String username) {
+        return userRepository.existsByUsername(username);
     }
 
-    public String generateDefaultPassword(int length) {
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    public List<User> getUsers() {
+        return userRepository.findAll();
+    }
 
-        StringBuilder password = new StringBuilder();
-
-        for (int i = 0; i < length; i++) {
-            int index = (int) (Math.random() * characters.length());
-            password.append(characters.charAt(index));
-
-            if ((i + 1) % 3 == 0 && i + 1 < length) {
-                password.append("-");
-            }
-        }
-
-    return password.toString();
+    public User createUser(RegisterDto registerDto) {
+        User user = new User();
+        user.setUsername(registerDto.getUsername().trim());
+        user.setDisplayName(registerDto.getDisplayname());
+        user.setPassword(passwordEncoder.encode(registerDto.getPassword()));
+        user.setRole(registerDto.getRole() == null
+                ? com.feswiesbaden.attendencemanagement.entity.Role.TEACHER
+                : registerDto.getRole());
+        user.setFirstLogin(true);
+        user.setCreatedAt(LocalDate.now());
+        return userRepository.save(user);
     }
 }

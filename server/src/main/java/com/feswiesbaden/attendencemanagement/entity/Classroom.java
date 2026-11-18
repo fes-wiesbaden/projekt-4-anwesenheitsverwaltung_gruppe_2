@@ -1,7 +1,9 @@
 package com.feswiesbaden.attendencemanagement.entity;
 
 import java.util.List;
+import java.util.ArrayList;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -34,11 +36,13 @@ public class Classroom {
     @JoinColumn(name = "room_id")
     private Room room;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "classroom")
-    private List<Student> students;
+    private List<Student> students = new ArrayList<>();
 
+    @JsonIgnore
     @ManyToMany
     @JoinTable (name = "classroom_user", joinColumns = @JoinColumn (name = "classroom_id"), inverseJoinColumns = @JoinColumn (name = "user_id"))
-    private List<User> teachers;
+    private List<User> teachers = new ArrayList<>();
 
 }

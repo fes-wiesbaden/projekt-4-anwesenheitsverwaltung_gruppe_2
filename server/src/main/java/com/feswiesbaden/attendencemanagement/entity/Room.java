@@ -1,5 +1,6 @@
 package com.feswiesbaden.attendencemanagement.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,6 +20,7 @@ public class Room {
 
     private String roomNumber;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "room")
     private List<Classroom> classrooms;
 }

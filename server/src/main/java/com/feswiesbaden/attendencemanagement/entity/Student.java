@@ -1,5 +1,6 @@
 package com.feswiesbaden.attendencemanagement.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -32,6 +33,7 @@ public class Student {
     @JoinColumn(name = "rfid_chip_id")
     private Rfid_chip rfidChip;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Attendance> attendances;
 }

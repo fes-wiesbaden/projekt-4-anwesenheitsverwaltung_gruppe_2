@@ -15,10 +15,11 @@ public interface ClassroomRepository extends JpaRepository<Classroom, Long> {
     boolean existsByClassroomName(String name);
 
     @Query("""
-                SELECT c.classroomName
+                SELECT DISTINCT c.classroomName
                 FROM Classroom c
-                JOIN c.teachers t
+                LEFT JOIN c.teachers t
                 WHERE t.username = :username
+                   OR c.id = (SELECT u.myClassroom.id FROM User u WHERE u.username = :username)
             """)
     List<String> findClassroomNamesByTeacherUsername(
             @Param("username") String username);

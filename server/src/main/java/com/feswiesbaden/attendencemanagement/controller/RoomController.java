@@ -19,10 +19,10 @@ public class RoomController {
 
     @PostMapping("/create")
     public ResponseEntity<Room> Create(@RequestBody CreateRoomDto dto) {
-        if (dto.RoomName == null || dto.RoomName.isBlank()) return ResponseEntity.badRequest().build();
+        if (dto == null || dto.RoomName == null || dto.RoomName.isBlank()) return ResponseEntity.badRequest().build();
 
         Room room = new Room();
-        room.setRoomName(dto.RoomName);
+        room.setRoomName(dto.RoomName.trim());
         room.setRoomNumber(dto.RoomNumber);
 
         roomRepository.save(room);

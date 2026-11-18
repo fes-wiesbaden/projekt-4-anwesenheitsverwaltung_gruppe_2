@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.*;
 
 import com.feswiesbaden.attendencemanagement.entity.Attendance;
+import com.feswiesbaden.attendencemanagement.dto.response.AttendanceRecordResponseDto;
 import com.feswiesbaden.attendencemanagement.service.ClassroomService;
 
 import java.util.Optional;
@@ -57,15 +58,17 @@ public class ClassroomController {
             Authentication authentication){
         User user = getCurrentUser(authentication);
         if (user == null || user.getRole() != Role.ADMIN) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-
-        if (classroomRepository.existsByClassroomName(dto.classroomName)) return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        if (dto == null || dto.classroomName == null || dto.classroomName.isBlank() || dto.roomId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (classroomRepository.existsByClassroomName(dto.classroomName.trim())) return ResponseEntity.status(HttpStatus.CONFLICT).build();
 
         Optional<Room> existingRoom = roomRepository.findById(dto.roomId);
         if(existingRoom.isEmpty()) return ResponseEntity.notFound().build();
         Room room = existingRoom.get();
 
         Classroom classroom = new Classroom();
-        classroom.setClassroomName(dto.classroomName);
+        classroom.setClassroomName(dto.classroomName.trim());
         classroom.setRoom(room);
 
         classroomRepository.save(classroom);
@@ -87,13 +90,17 @@ public class ClassroomController {
         if (existingStudent.isEmpty()) return ResponseEntity.notFound().build();
 
         Student student = existingStudent.get();
+        if (user.getRole() != Role.ADMIN && student.getClassroom() != null
+                && !student.getClassroom().getId().equals(classroomId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
 
         Optional<Classroom> existingClassroom = classroomRepository.findById(classroomId);
         if (existingClassroom.isEmpty()) return ResponseEntity.notFound().build();
 
         Classroom classroom = existingClassroom.get();
 
-        if (user.getRole() != Role.ADMIN && !classroomService.isOwner(user, classroom)) {
+        if (!classroomService.hasAccess(user, classroom)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -114,13 +121,17 @@ public class ClassroomController {
     public ResponseEntity<List<String>> getAllClassrooms(
             Authentication authentication) {
 
-        return ResponseEntity.ok(
-                classroomService.getAvailableClassrooms(
-                        authentication.getName()));
+        User user = getCurrentUser(authentication);
+        if (user == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (user.getRole() == Role.ADMIN) {
+            return ResponseEntity.ok(classroomRepository.findAll().stream()
+                    .map(Classroom::getClassroomName).toList());
+        }
+        return ResponseEntity.ok(classroomService.getAvailableClassrooms(authentication.getName()));
     }
 
     @GetMapping("/AttendanceDay")
-    public ResponseEntity<List<Attendance>> getAttendances(Authentication authentication,
+    public ResponseEntity<List<AttendanceRecordResponseDto>> getAttendances(Authentication authentication,
             @RequestParam("classname") String Classname,
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         User user = getCurrentUser(authentication);
@@ -132,6 +143,7 @@ public class ClassroomController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        return ResponseEntity.ok(classroomService.getAttendances(Classname, date));
+        return ResponseEntity.ok(classroomService.getAttendances(Classname, date).stream()
+                .map(AttendanceRecordResponseDto::new).toList());
     }
 }

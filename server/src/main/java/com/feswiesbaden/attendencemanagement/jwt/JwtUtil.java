@@ -45,7 +45,6 @@ public class JwtUtil {
                 .signWith(getSigningKey())
                 .compact();
         log.info("JWT successfully generated for user: {}", username);
-        log.debug("Generated JWT: {}", token);
         return token;
     }
 
