@@ -164,7 +164,7 @@ public class AttendanceController {
         existingAttendance.setCheckin(updatedAttendance.getCheckin());
         existingAttendance.setCheckout(updatedAttendance.getCheckout());
         existingAttendance.setStatus(updatedAttendance.getStatus());
-        existingAttendance.setReason(updatedAttendance.getReason());
+        existingAttendance.setDescription(updatedAttendance.getDescription());
 
         Attendance savedAttendance = attendanceRepository.save(existingAttendance);
         return ResponseEntity.ok(savedAttendance);
