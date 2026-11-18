@@ -17,3 +17,35 @@ export function getAttendanceForDay(
     `/classroom/AttendanceDay?${params.toString()}`,
   );
 }
+
+export function checkinStudent(
+  studentId: string,
+): Promise<string> {
+  return apiFetch<string>(
+    `/attendance/checkin/${studentId}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function checkoutStudent(
+  studentId: string,
+  date: string,
+  reason?: string,
+): Promise<string> {
+  const params = new URLSearchParams({
+    date,
+  });
+
+  if (reason) {
+    params.set("reason", reason);
+  }
+
+  return apiFetch<string>(
+    `/attendance/student/${studentId}/checkout?${params.toString()}`,
+    {
+      method: "POST",
+    },
+  );
+}

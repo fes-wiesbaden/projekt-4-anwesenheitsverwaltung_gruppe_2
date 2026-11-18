@@ -7,8 +7,10 @@ import {
   FormControl,
   IconButton,
   InputLabel,
+  Menu,
   MenuItem,
   Select,
+  Snackbar,
   TextField,
 } from "@mui/material";
 
@@ -36,8 +38,15 @@ import RecentRfidScans from "./dashboard/RecentRfidScans";
 import InformationPanel from "./dashboard/InformationPanel";
 
 import {
+  checkinStudent,
+  checkoutStudent,
   getAttendanceForDay,
 } from "../services/attendanceService";
+
+import {
+  describeActionError,
+  getRowActions,
+} from "../utils/rowActions";
 
 import {
   getStudentsOfClass,
@@ -93,6 +102,27 @@ function ListView() {
 
   const [reloadKey, setReloadKey] =
     useState(0);
+  
+  const [menuAnchor, setMenuAnchor] =
+    useState<HTMLElement | null>(null);
+
+  const [menuRow, setMenuRow] =
+    useState<AttendanceRow | null>(null);
+
+  const [notice, setNotice] =
+    useState<{
+      type: "success" | "error";
+      text: string;
+    } | null>(null);
+
+  const [isActing, setIsActing] =
+    useState(false);
+
+  const todayString =
+    new Date().toLocaleDateString("sv-SE");
+
+  const isToday =
+    selectedDate === todayString;
     
 /*
  * Klassen aus dem Backend laden.
@@ -308,6 +338,70 @@ function ListView() {
     );
   };
 
+  const closeMenu = () => {
+    setMenuAnchor(null);
+    setMenuRow(null);
+  };
+
+  const runAction = async (
+    action: () => Promise<unknown>,
+    successText: string,
+  ) => {
+    closeMenu();
+    setIsActing(true);
+
+    try {
+      await action();
+
+      setNotice({
+        type: "success",
+        text: successText,
+      });
+
+      setReloadKey(
+        (current) => current + 1,
+      );
+    } catch (error) {
+      setNotice({
+        type: "error",
+        text: describeActionError(error),
+      });
+    } finally {
+      setIsActing(false);
+    }
+  };
+
+  const handleCheckin = () => {
+    if (!menuRow) {
+      return;
+    }
+
+    const row = menuRow;
+
+    void runAction(
+      () =>
+        checkinStudent(row.studentId),
+      `${row.studentName} wurde eingecheckt.`,
+    );
+  };
+
+  const handleCheckout = () => {
+    if (!menuRow) {
+      return;
+    }
+
+    const row = menuRow;
+
+    void runAction(
+      () =>
+        checkoutStudent(
+          row.studentId,
+          selectedDate,
+        ),
+      `${row.studentName} wurde ausgecheckt.`,
+    );
+  };
+
   const getStatusLabel = (
     status: AttendanceStatus,
   ) => {
@@ -320,9 +414,6 @@ function ListView() {
 
       case "ABSENT":
         return "Abwesend";
-
-      case "NOT_RECORDED":
-        return "Nicht erfasst";
 
       case "NOT_RECORDED":
         return "Nicht erfasst";
@@ -450,14 +541,39 @@ function ListView() {
       sortable: false,
       filterable: false,
 
-      renderCell: () => (
-        <IconButton
-          size="small"
-          aria-label="Aktionen anzeigen"
-        >
-          <MoreVert fontSize="small" />
-        </IconButton>
-      ),
+      renderCell: (params) => {
+        const row =
+          params.row as AttendanceRow;
+
+        const actions =
+          getRowActions(
+            row,
+            isToday,
+          );
+
+        const hasActions =
+          actions.canCheckin ||
+          actions.canCheckout;
+
+        return (
+          <IconButton
+            size="small"
+            aria-label="Aktionen anzeigen"
+            disabled={
+              !hasActions || isActing
+            }
+            onClick={(event) => {
+              setMenuAnchor(
+                event.currentTarget,
+              );
+
+              setMenuRow(row);
+            }}
+          >
+            <MoreVert fontSize="small" />
+          </IconButton>
+        );
+      },
     },
   ];
 
@@ -790,6 +906,56 @@ function ListView() {
           />
         </aside>
       </div>
+
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={closeMenu}
+      >
+        {menuRow &&
+          getRowActions(
+            menuRow,
+            isToday,
+          ).canCheckin && (
+            <MenuItem
+              onClick={handleCheckin}
+            >
+              Einchecken
+            </MenuItem>
+          )}
+
+        {menuRow &&
+          getRowActions(
+            menuRow,
+            isToday,
+          ).canCheckout && (
+            <MenuItem
+              onClick={handleCheckout}
+            >
+              Auschecken
+            </MenuItem>
+          )}
+      </Menu>
+
+      <Snackbar
+        open={notice !== null}
+        autoHideDuration={5000}
+        onClose={() =>
+          setNotice(null)
+        }
+      >
+        {notice ? (
+          <Alert
+            severity={notice.type}
+            onClose={() =>
+              setNotice(null)
+            }
+          >
+            {notice.text}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
+
     </section>
   );
 }
