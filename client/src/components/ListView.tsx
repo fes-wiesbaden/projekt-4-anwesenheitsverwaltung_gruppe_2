@@ -301,7 +301,7 @@ function ListView() {
  /*
   * Anwesenheitsdaten erneut vom Backend laden.
   */
- 
+
   const handleRefresh = () => {
     setReloadKey(
       (current) => current + 1,
@@ -320,6 +320,9 @@ function ListView() {
 
       case "ABSENT":
         return "Abwesend";
+
+      case "NOT_RECORDED":
+        return "Nicht erfasst";
 
       case "NOT_RECORDED":
         return "Nicht erfasst";

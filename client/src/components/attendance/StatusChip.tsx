@@ -1,16 +1,21 @@
 import {
   CheckCircleOutlined,
+  HelpOutlined,
   HighlightOff,
   Schedule,
 } from "@mui/icons-material";
 
-import type { AttendanceStatus } from "../../types/attendance";
+import type {
+  AttendanceStatus,
+} from "../../types/attendance";
 
 interface StatusChipProps {
   status: AttendanceStatus;
 }
 
-function StatusChip({ status }: StatusChipProps) {
+function StatusChip({
+  status,
+}: StatusChipProps) {
   if (status === "PRESENT") {
     return (
       <span className="status-chip status-present">
@@ -25,6 +30,15 @@ function StatusChip({ status }: StatusChipProps) {
       <span className="status-chip status-late">
         <Schedule fontSize="small" />
         Verspätet
+      </span>
+    );
+  }
+
+  if (status === "NOT_RECORDED") {
+    return (
+      <span className="status-chip status-unknown">
+        <HelpOutlined fontSize="small" />
+        Nicht erfasst
       </span>
     );
   }
