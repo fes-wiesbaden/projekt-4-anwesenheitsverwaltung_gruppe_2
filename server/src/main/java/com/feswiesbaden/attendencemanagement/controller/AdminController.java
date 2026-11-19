@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.List;
 import java.util.UUID;
 
+import com.feswiesbaden.attendencemanagement.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
@@ -45,6 +46,7 @@ public class AdminController {
     private final AdminService adminService;
     private final ClassroomService classroomService;
     private final SystemAuditLogService auditLogService;
+    private final UserRepository userRepository;
 
     @GetMapping("/users")
     public ResponseEntity<List<UserResponseDto>> getUsers() {
@@ -54,7 +56,7 @@ public class AdminController {
                 .toList());
     }
 
-    @PostMapping("/createUser")
+    @PostMapping("/teacher/create")
     public ResponseEntity<UserResponseDto> createUser(@RequestBody RegisterDto registerDto) {
         if (registerDto == null || registerDto.getUsername() == null || registerDto.getUsername().isBlank()
                 || registerDto.getPassword() == null || registerDto.getPassword().length() < 10) {
@@ -72,6 +74,51 @@ public class AdminController {
                 user.getRole());
         return ResponseEntity.ok(response);
     }
+
+
+    @PutMapping("/teacher/{id}")
+    public ResponseEntity<User> EditTeacher(@PathVariable UUID id, @Valid @RequestBody RegisterDto dto, Authentication auth) {
+        if (dto == null || dto.username == null || dto.username.isBlank())
+            return ResponseEntity.badRequest().build();
+
+        Optional<User> existingOpt = userRepository.findById(id);
+        if (existingOpt.isEmpty())
+            return ResponseEntity.notFound().build();
+
+        User existing = existingOpt.get();
+
+        String normalizedUsername = dto.username.trim();
+        if (!existing.getUsername().equals(normalizedUsername)
+                && userRepository.existsByUsername(normalizedUsername)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+
+        String before = existing.getUsername() + "|" + existing.getDisplayName();
+        existing.setUsername(normalizedUsername);
+        existing.setDisplayName(dto.displayName);
+        existing.setRole(dto.role);
+        userRepository.save(existing);
+        auditLogService.record(auth.getName(), "TEACHER_UPDATED", "TEACHER", existing.getId().toString(),
+                "Updated teacher " + existing.getUsername(), before,
+                existing.getUsername() + "|" + existing.getDisplayName());
+
+        return ResponseEntity.ok(existing);
+    }
+
+    @DeleteMapping("/teacher/{id}")
+    public ResponseEntity<Void> DeleteTeacher(@PathVariable UUID id, Authentication auth) {
+        User teacher = userRepository.findById(id).orElse(null);
+        if (teacher == null) return ResponseEntity.notFound().build();
+        if (attendanceRepository.existsByStudent_Id(id)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+        auditLogService.record(auth.getName(), "TEACHER_DELETED", "TEACHER", id.toString(),
+                "Deleted teacher " + teacher.getUsername(), teacher.getUsername() + "|" + teacher.getDisplayName(), null);
+        userRepository.save(teacher);
+        userRepository.delete(teacher);
+        return ResponseEntity.noContent().build();
+    }
+
 
     @PostMapping("/assign-class")
     public ResponseEntity<UserResponseDto> assignClass(@RequestBody AssignClassDto assignClassDto, Authentication auth) {
@@ -131,7 +178,7 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/create")
+    @PostMapping("/student/create")
     public ResponseEntity<CreateStudentResponseDto> CreateStudent(@RequestBody CreateStudentRequestDto dto, Authentication auth) {
         if (dto == null || dto.username == null || dto.username.isBlank())
             return ResponseEntity.badRequest().build();
@@ -145,11 +192,10 @@ public class AdminController {
         auditLogService.record(auth.getName(), "STUDENT_CREATED", "STUDENT", student.getId().toString(),
                 "Created student " + student.getUsername(), null, student.getUsername() + "|" + student.getDisplayName());
 
-        System.out.println("Saved Student with username: " + dto.username);
         return ResponseEntity.ok(new CreateStudentResponseDto(student.getId(), student.getUsername()));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/student/{id}")
     public ResponseEntity<Student> EditStudent(@PathVariable UUID id, @Valid @RequestBody CreateStudentRequestDto dto, Authentication auth) {
         if (dto == null || dto.username == null || dto.username.isBlank())
             return ResponseEntity.badRequest().build();
@@ -174,11 +220,10 @@ public class AdminController {
                 "Updated student " + existing.getUsername(), before,
                 existing.getUsername() + "|" + existing.getDisplayName());
 
-        System.out.println("Updated User: " + dto.username);
         return ResponseEntity.ok(existing);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/student/{id}")
     public ResponseEntity<Void> DeleteStudent(@PathVariable UUID id, Authentication auth) {
         Student student = studentRepository.findById(id).orElse(null);
         if (student == null) return ResponseEntity.notFound().build();
@@ -190,7 +235,6 @@ public class AdminController {
         student.setRfidChip(null);
         studentRepository.save(student);
         studentRepository.delete(student);
-        System.out.println("Deleted Student with id: " + id);
         return ResponseEntity.noContent().build();
     }
 
