@@ -23,7 +23,9 @@ import com.feswiesbaden.attendencemanagement.entity.Role;
 import com.feswiesbaden.attendencemanagement.entity.User;
 import com.feswiesbaden.attendencemanagement.exceptions.ClassroomNotFoundException;
 import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
+import com.feswiesbaden.attendencemanagement.repository.AttendanceSessionRepository;
 import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
+import com.feswiesbaden.attendencemanagement.entity.AttendanceSession;
 
 @ExtendWith(MockitoExtension.class)
 class ClassroomServiceTest {
@@ -33,6 +35,9 @@ class ClassroomServiceTest {
 
     @Mock
     private AttendanceRepository attendanceRepository;
+
+    @Mock
+    private AttendanceSessionRepository sessionRepository;
 
     @InjectMocks
     private ClassroomService classroomService;
@@ -46,7 +51,7 @@ class ClassroomServiceTest {
 
     @Test
     void hasAccess_allowsClassOwner() {
-        User owner = userWithId(Role.USER, UUID.randomUUID());
+        User owner = userWithId(Role.TEACHER, UUID.randomUUID());
         owner.setMyClassroom(classroom(1L));
 
         assertThat(classroomService.hasAccess(owner, classroom(1L))).isTrue();
@@ -54,7 +59,7 @@ class ClassroomServiceTest {
 
     @Test
     void hasAccess_allowsAssignedTeacher() {
-        User teacher = userWithId(Role.USER, UUID.randomUUID());
+        User teacher = userWithId(Role.TEACHER, UUID.randomUUID());
         Classroom classroom = classroom(1L);
         classroom.setTeachers(List.of(teacher));
 
@@ -63,7 +68,7 @@ class ClassroomServiceTest {
 
     @Test
     void hasAccess_deniesUnrelatedUser() {
-        User user = userWithId(Role.USER, UUID.randomUUID());
+        User user = userWithId(Role.TEACHER, UUID.randomUUID());
         Classroom classroom = classroom(1L);
         classroom.setTeachers(new ArrayList<>());
 
@@ -76,12 +81,14 @@ class ClassroomServiceTest {
         Classroom classroom = classroom(1L);
         List<Attendance> attendances = List.of(new Attendance());
         when(classroomRepository.findByClassroomName("10A")).thenReturn(Optional.of(classroom));
-        when(attendanceRepository.findByStudent_ClassroomAndCheckinBetween(
-                classroom, date.atStartOfDay(), date.atTime(23, 59, 59))).thenReturn(attendances);
+        AttendanceSession session = new AttendanceSession();
+        session.setId(42L);
+        when(sessionRepository.findDetailedBySessionDateAndClassroom(date, 1L))
+                .thenReturn(Optional.of(session));
+        when(attendanceRepository.findBySession_Id(42L)).thenReturn(attendances);
 
         assertThat(classroomService.getAttendances("10A", date)).isSameAs(attendances);
-        verify(attendanceRepository).findByStudent_ClassroomAndCheckinBetween(
-                classroom, date.atStartOfDay(), date.atTime(23, 59, 59));
+        verify(attendanceRepository).findBySession_Id(42L);
     }
 
     @Test

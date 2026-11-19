@@ -52,14 +52,14 @@ class CardServiceTest {
 
         assertThat(cardService.saveRfid("card-1")).isEqualTo(SaveResult.SAVED);
 
-        verify(rfidRepository).save(org.mockito.ArgumentMatchers.argThat(
+        verify(rfidRepository).saveAndFlush(org.mockito.ArgumentMatchers.argThat(
                 chip -> "card-1".equals(chip.getChipId())));
     }
 
     @Test
     void saveRfid_integrityConflictReturnsDuplicate() throws Exception {
         when(rfidRepository.existsByChipId("card-1")).thenReturn(false);
-        when(rfidRepository.save(any(Rfid_chip.class)))
+        when(rfidRepository.saveAndFlush(any(Rfid_chip.class)))
                 .thenThrow(new DataIntegrityViolationException("duplicate chip"));
 
         assertThat(cardService.saveRfid("card-1")).isEqualTo(SaveResult.DUPLICATE);

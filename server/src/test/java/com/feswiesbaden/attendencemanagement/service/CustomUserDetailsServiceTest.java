@@ -30,14 +30,14 @@ class CustomUserDetailsServiceTest {
         User user = new User();
         user.setUsername("teacher");
         user.setPassword("encoded-password");
-        user.setRole(Role.USER);
+        user.setRole(Role.TEACHER);
         when(userRepository.findByUsername("teacher")).thenReturn(user);
 
         UserDetails details = service.loadUserByUsername("teacher");
 
         assertThat(details.getUsername()).isEqualTo("teacher");
         assertThat(details.getPassword()).isEqualTo("encoded-password");
-        assertThat(details.getAuthorities()).extracting("authority").containsExactly("ROLE_USER");
+        assertThat(details.getAuthorities()).extracting("authority").containsExactly("ROLE_TEACHER");
     }
 
     @Test
