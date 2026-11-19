@@ -41,7 +41,15 @@ import {
   checkinStudent,
   checkoutStudent,
   getAttendanceForDay,
+  updateAttendance,
 } from "../services/attendanceService";
+
+import EditAttendanceDialog from "./attendance/EditAttendanceDialog";
+
+import {
+  buildUpdateBody,
+  type EditFormValues,
+} from "../utils/attendanceEdit";
 
 import {
   describeActionError,
@@ -117,6 +125,9 @@ function ListView() {
 
   const [isActing, setIsActing] =
     useState(false);
+
+  const [editRow, setEditRow] =
+    useState<AttendanceRow | null>(null);
 
   const todayString =
     new Date().toLocaleDateString("sv-SE");
@@ -402,6 +413,67 @@ function ListView() {
     );
   };
 
+  const handleEditOpen = () => {
+    if (!menuRow || menuRow.attendanceId === null) {
+      return;
+    }
+
+    setEditRow(menuRow);
+    closeMenu();
+  };
+
+  const handleEditSave = (
+    values: EditFormValues,
+  ) => {
+
+    const row = editRow;
+
+    if (
+      !row ||
+      row.attendanceId === null ||
+      isActing
+    ) {
+      return;
+    }
+
+    const attendanceId: number = row.attendanceId;
+
+    void (async () => {
+      setIsActing(true);
+
+      try {
+        const body = buildUpdateBody(
+          row,
+          selectedDate,
+          values,
+        );
+
+        await updateAttendance(
+          attendanceId,
+          body,
+        );
+
+        setNotice({
+          type: "success",
+          text: `Anwesenheit von ${row.studentName} wurde gespeichert.`,
+        });
+
+        setEditRow(null);
+
+        setReloadKey(
+          (current) => current + 1,
+        );
+      } catch (error) {
+        setNotice({
+          type: "error",
+          text: describeActionError(error),
+        });
+      } finally {
+        setIsActing(false);
+      }
+    })();
+  };
+
   const getStatusLabel = (
     status: AttendanceStatus,
   ) => {
@@ -553,7 +625,8 @@ function ListView() {
 
         const hasActions =
           actions.canCheckin ||
-          actions.canCheckout;
+          actions.canCheckout ||
+          actions.canEdit;
 
         return (
           <IconButton
@@ -935,6 +1008,17 @@ function ListView() {
               Auschecken
             </MenuItem>
           )}
+        {menuRow &&
+          getRowActions(
+            menuRow,
+            isToday,
+          ).canEdit && (
+            <MenuItem
+              onClick={handleEditOpen}
+            >
+              Bearbeiten
+            </MenuItem>
+          )}
       </Menu>
 
       <Snackbar
@@ -955,6 +1039,13 @@ function ListView() {
           </Alert>
         ) : undefined}
       </Snackbar>
+
+      <EditAttendanceDialog
+        row={editRow}
+        isSaving={isActing}
+        onClose={() => setEditRow(null)}
+        onSave={handleEditSave}
+      />
 
     </section>
   );

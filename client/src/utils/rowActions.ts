@@ -7,19 +7,24 @@ import type {
 export interface RowActions {
   canCheckin: boolean;
   canCheckout: boolean;
+  canEdit: boolean;
 }
 
 export function getRowActions(
-  row: Pick<
-    AttendanceRow,
-    "checkIn" | "checkOut"
-  >,
+  row: Pick<AttendanceRow, "checkIn" | "checkOut"> & {
+    attendanceId?: number | null;
+  },
   isToday: boolean,
 ): RowActions {
+  const canEdit =
+    row.attendanceId !== null &&
+    row.attendanceId !== undefined;
+
   if (!isToday) {
     return {
       canCheckin: false,
       canCheckout: false,
+      canEdit,
     };
   }
 
@@ -29,6 +34,7 @@ export function getRowActions(
   return {
     canCheckin: !hasIn && !hasOut,
     canCheckout: hasIn && !hasOut,
+    canEdit,
   };
 }
 
