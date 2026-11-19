@@ -2,6 +2,7 @@ import { apiFetch } from "../api/http";
 
 import type {
   ApiAttendanceRecord,
+  ApiAttendanceUpdate,
 } from "../types/api";
 
 export function getAttendanceForDay(
@@ -46,6 +47,19 @@ export function checkoutStudent(
     `/attendance/student/${studentId}/checkout?${params.toString()}`,
     {
       method: "POST",
+    },
+  );
+}
+
+export function updateAttendance(
+  attendanceId: number,
+  body: ApiAttendanceUpdate,
+): Promise<unknown> {
+  return apiFetch<unknown>(
+    `/attendance/edit/${attendanceId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(body),
     },
   );
 }

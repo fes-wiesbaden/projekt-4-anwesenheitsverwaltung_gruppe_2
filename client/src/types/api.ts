@@ -28,3 +28,10 @@ export interface ApiAttendanceRecord {
   checkedOutBy: string | null;
   description: string | null;
 }
+
+export interface ApiAttendanceUpdate {
+  checkin: string | null;
+  checkout: string | null;
+  status: ApiAttendanceStatus;
+  description: string | null;
+}

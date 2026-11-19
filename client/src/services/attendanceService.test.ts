@@ -1,7 +1,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/http";
-import { checkinStudent, checkoutStudent } from "./attendanceService";
+import { checkinStudent, checkoutStudent, updateAttendance, } from "./attendanceService";
 
 function mockFetch(status: number, body: string) {
   const fn = vi.fn().mockImplementation(
@@ -60,5 +60,28 @@ describe("attendanceService", () => {
     await expect(
       checkinStudent("abc"),
     ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("sendet das Bearbeiten als PUT mit JSON-Body", async () => {
+    const fn = mockFetch(200, "{}");
+
+    const body = {
+      checkin: "2026-11-18T08:00:00",
+      checkout: null,
+      status: "ANWESEND" as const,
+      description: "Arzttermin",
+    };
+
+    await updateAttendance(54, body);
+
+    expect(fn.mock.calls[0][0]).toBe(
+      "/api/attendance/edit/54",
+    );
+
+    expect(fn.mock.calls[0][1].method).toBe("PUT");
+
+    expect(
+      JSON.parse(fn.mock.calls[0][1].body),
+    ).toEqual(body);
   });
 });
