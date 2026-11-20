@@ -1,10 +1,7 @@
-import { Button } from "@mui/material";
 
-import ArrowForwardOutlinedIcon from "@mui/icons-material/ArrowForwardOutlined";
-import SensorsOutlinedIcon from "@mui/icons-material/SensorsOutlined";
+import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 
 import StatusChip from "../attendance/StatusChip";
-
 import type { AttendanceRow } from "../../types/attendance";
 
 interface RecentRfidScansProps {
@@ -18,24 +15,15 @@ function RecentRfidScans({
     <section className="side-card">
       <div className="side-card-header">
         <div className="side-card-title">
-          <SensorsOutlinedIcon />
-
-          <h2>Letzte RFID-Scans</h2>
+          <AccessTimeOutlinedIcon />
+          <h2>Letzte Check-ins</h2>
         </div>
-
-        <Button
-          className="show-all-button"
-          size="small"
-          endIcon={<ArrowForwardOutlinedIcon />}
-        >
-          Alle anzeigen
-        </Button>
       </div>
 
       <div className="rfid-scan-list">
         {rows.length === 0 ? (
           <div className="empty-side-message">
-            Noch keine RFID-Scans vorhanden.
+            Noch keine Check-ins vorhanden.
           </div>
         ) : (
           rows.map((row) => (
@@ -44,7 +32,7 @@ function RecentRfidScans({
               key={row.studentId}
             >
               <div className="rfid-scan-time">
-                {row.checkIn ?? "—"}
+                {row.checkIn ?? "–"}
               </div>
 
               <div className="rfid-scan-student">

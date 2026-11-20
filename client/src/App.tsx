@@ -71,7 +71,7 @@ function App() {
             ) : page === "classes" ? (
               <ClassesPage />
             ) : page === "dashboard" ? (
-              <DashboardPage />
+              <DashboardPage onOpenAttendance={() => setPage("attendance")}/>
             ) : page === "reports" ? (
               <ReportsPage />
             ) : page === "settings" ? (
