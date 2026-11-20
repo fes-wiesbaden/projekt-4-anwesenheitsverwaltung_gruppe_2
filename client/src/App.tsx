@@ -6,6 +6,7 @@ import PlaceholderPage from "./components/PlaceholderPage";
 import StudentsPage from "./components/StudentsPage";
 import ClassesPage from "./components/ClassesPage";
 import DashboardPage from "./components/DashboardPage";
+import ReportsPage from "./components/ReportsPage";
 import { PAGE_TITLES, type PageId } from "./navigation";
 import {
   getUsernameFromToken,
@@ -72,6 +73,8 @@ function App() {
               <ClassesPage />
             ) : page === "dashboard" ? (
               <DashboardPage />
+            ) : page === "reports" ? (
+              <ReportsPage />
             ) : (
               <PlaceholderPage
                 title={PAGE_TITLES[page]}

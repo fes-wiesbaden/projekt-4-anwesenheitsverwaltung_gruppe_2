@@ -66,3 +66,29 @@ export interface ApiDashboard {
   earlyDepartures: number;
   attendancePercentage: number;
 }
+
+export interface ApiReportRow {
+  attendanceId: number;
+  date: string;
+  studentId: string;
+  studentName: string;
+  classId: number;
+  className: string;
+  status: ApiAttendanceStatus | null;
+  checkin: string | null;
+  checkout: string | null;
+  checkoutReason: string | null;
+  checkedOutBy: string | null;
+}
+
+export interface ApiPeriodReport {
+  from: string;
+  to: string;
+  records: number;
+  present: number;
+  absent: number;
+  lateArrivals: number;
+  earlyDepartures: number;
+  attendancePercentage: number;
+  attendance: ApiReportRow[];
+}
