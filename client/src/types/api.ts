@@ -53,3 +53,16 @@ export interface ApiAttendanceUpdate {
   status: ApiAttendanceStatus;
   description: string | null;
 }
+
+export interface ApiDashboard {
+  totalStudents: number;
+  totalClasses: number;
+  from: string;
+  to: string;
+  records: number;
+  present: number;
+  absent: number;
+  lateArrivals: number;
+  earlyDepartures: number;
+  attendancePercentage: number;
+}

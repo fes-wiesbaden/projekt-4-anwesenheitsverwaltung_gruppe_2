@@ -5,6 +5,7 @@ import ListView from "./components/ListView";
 import PlaceholderPage from "./components/PlaceholderPage";
 import StudentsPage from "./components/StudentsPage";
 import ClassesPage from "./components/ClassesPage";
+import DashboardPage from "./components/DashboardPage";
 import { PAGE_TITLES, type PageId } from "./navigation";
 import {
   getUsernameFromToken,
@@ -69,6 +70,8 @@ function App() {
               <StudentsPage />
             ) : page === "classes" ? (
               <ClassesPage />
+            ) : page === "dashboard" ? (
+              <DashboardPage />
             ) : (
               <PlaceholderPage
                 title={PAGE_TITLES[page]}
