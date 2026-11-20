@@ -3,6 +3,7 @@ import Sidebar from "./components/layout/Sidebar";
 import { useState } from "react";
 import ListView from "./components/ListView";
 import PlaceholderPage from "./components/PlaceholderPage";
+import StudentsPage from "./components/StudentsPage";
 import { PAGE_TITLES, type PageId } from "./navigation";
 import LoginView from "./components/LoginView";
 import "./css/main.css";
@@ -49,6 +50,8 @@ function App() {
           <main className="app-main">
             {page === "attendance" ? (
               <ListView />
+            ) : page === "students" ? (
+              <StudentsPage />
             ) : (
               <PlaceholderPage
                 title={PAGE_TITLES[page]}

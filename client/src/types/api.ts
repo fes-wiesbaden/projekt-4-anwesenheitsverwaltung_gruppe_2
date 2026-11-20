@@ -13,6 +13,10 @@ export interface ApiStudent {
   displayName: string;
   username: string;
   classroom: ApiClassroomRef | null;
+  rfidChip?: {
+    id: string;
+    chipId: string;
+  } | null;
 }
 
 export interface ApiAttendanceRecord {
