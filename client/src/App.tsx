@@ -5,6 +5,10 @@ import ListView from "./components/ListView";
 import PlaceholderPage from "./components/PlaceholderPage";
 import StudentsPage from "./components/StudentsPage";
 import { PAGE_TITLES, type PageId } from "./navigation";
+import {
+  getUsernameFromToken,
+  isTokenExpired,
+} from "./utils/token";
 import LoginView from "./components/LoginView";
 import "./css/main.css";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -19,9 +23,16 @@ import {
 } from "@mui/material";
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(
-  () => Boolean(sessionStorage.getItem("token")),
-);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+  const token = sessionStorage.getItem("token");
+
+  if (token && isTokenExpired(token)) {
+    sessionStorage.removeItem("token");
+    return false;
+  }
+
+  return Boolean(token);
+  });
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [page, setPage] = useState<PageId>("attendance");
@@ -37,6 +48,9 @@ function App() {
         <div className="app-shell">
 
           <AppHeader
+            username={getUsernameFromToken(
+              sessionStorage.getItem("token"),
+            )}
             onHelp={() => setHelpOpen(true)}
             onLogout={handleLogout}
           />
