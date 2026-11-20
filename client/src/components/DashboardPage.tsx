@@ -92,7 +92,7 @@ function DashboardPage() {
   }, []);
 
   return (
-    <section className="attendance-page">
+    <section className="attendance-page page-scroll">
       <div className="page-heading">
         <div>
           <h1>Dashboard</h1>

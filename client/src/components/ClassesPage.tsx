@@ -141,7 +141,7 @@ function ClassesPage() {
   }, []);
 
   return (
-    <section className="attendance-page">
+    <section className="attendance-page page-scroll">
       <div className="page-heading">
         <div>
           <h1>Klassen</h1>

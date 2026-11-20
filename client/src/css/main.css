@@ -271,7 +271,8 @@ body {
 
   padding: 18px 24px;
 
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 
@@ -991,4 +992,85 @@ body {
 .status-unknown {
   background: #f2f4f7;
   color: #475467;
+}
+
+/* ========================================
+   RESPONSIVE VERBESSERUNGEN
+   ======================================== */
+
+/* Normale Seiten dürfen vertikal wachsen */
+.attendance-page.page-scroll {
+  height: auto;
+  min-height: 100%;
+}
+
+/* Tabellenkarten auf diesen Seiten
+   sollen nicht abgeschnitten werden */
+.attendance-page.page-scroll .table-card {
+  flex: none;
+  overflow: visible;
+}
+
+/* Filter und Tabellenüberschriften
+   dürfen auf eine zweite Zeile wechseln */
+.attendance-table-header,
+.table-controls {
+  flex-wrap: wrap;
+}
+
+/* Kleine Laptops */
+@media (max-width: 1250px) {
+  .toolbar-actions {
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+  }
+}
+
+/* Niedrige und schmale Bildschirme */
+@media (max-width: 1150px), (max-height: 800px) {
+  .attendance-page {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .dashboard-content-grid {
+    flex: none;
+    overflow: visible;
+  }
+
+  .dashboard-main-column .table-card {
+    flex: none;
+    height: 560px;
+  }
+
+  .dashboard-side-column {
+    overflow: visible;
+  }
+}
+
+/* Header auf schmalen Bildschirmen */
+@media (max-width: 700px) {
+  .app-header {
+    padding: 0 12px;
+  }
+
+  .app-header-brand {
+    gap: 10px;
+  }
+
+  .app-logo {
+    font-size: 18px !important;
+  }
+
+  .app-header-actions {
+    gap: 6px;
+  }
+
+  .login-brand {
+    padding: 0 12px;
+  }
+
+  .login-brand h1 {
+    font-size: 20px;
+  }
 }
