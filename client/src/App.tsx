@@ -9,10 +9,8 @@ import DashboardPage from "./components/DashboardPage";
 import ReportsPage from "./components/ReportsPage";
 import SettingsPage from "./components/SettingsPage";
 import { PAGE_TITLES, type PageId } from "./navigation";
-import {
-  getUsernameFromToken,
-  isTokenExpired,
-} from "./utils/token";
+import { getUsernameFromToken, isTokenExpired } from "./utils/token";
+import fesLogo from "./assets/fes-logo.png";
 import LoginView from "./components/LoginView";
 import "./css/main.css";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -92,6 +90,16 @@ function App() {
       ) : (
         <>
         <div className="login-brand">
+          <img
+            src={fesLogo}
+            alt="Logo der Friedrich-Ebert-Schule Wiesbaden"
+            style={{
+              height: 48,
+              width: "auto",
+              objectFit: "contain",
+              marginRight: 16,
+            }}
+          />
           <h1>AttendanceCTRL</h1>
 
           <IconButton
