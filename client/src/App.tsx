@@ -4,6 +4,7 @@ import { useState } from "react";
 import ListView from "./components/ListView";
 import PlaceholderPage from "./components/PlaceholderPage";
 import StudentsPage from "./components/StudentsPage";
+import ClassesPage from "./components/ClassesPage";
 import { PAGE_TITLES, type PageId } from "./navigation";
 import {
   getUsernameFromToken,
@@ -66,6 +67,8 @@ function App() {
               <ListView />
             ) : page === "students" ? (
               <StudentsPage />
+            ) : page === "classes" ? (
+              <ClassesPage />
             ) : (
               <PlaceholderPage
                 title={PAGE_TITLES[page]}

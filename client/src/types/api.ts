@@ -6,6 +6,20 @@ export type ApiAttendanceStatus =
 export interface ApiClassroomRef {
   id: number;
   classroomName: string;
+  room?: {
+    id: number;
+    roomName: string;
+    roomNumber: string;
+  } | null;
+}
+
+export interface ApiTimetableEntry {
+  id: number;
+  classroomId: number;
+  classroomName: string;
+  dayOfWeek: string;
+  startTime: string;
+  checkoutTime: string;
 }
 
 export interface ApiStudent {
