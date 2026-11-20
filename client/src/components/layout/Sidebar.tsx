@@ -1,4 +1,5 @@
 import { Box, Button, Typography } from "@mui/material";
+import type { ReactNode } from "react";
 
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
@@ -8,61 +9,50 @@ import SensorsOutlinedIcon from "@mui/icons-material/SensorsOutlined";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 
-function Sidebar() {
+import { PAGE_TITLES, type PageId } from "../../navigation";
+
+interface SidebarProps {
+  current: PageId;
+  onNavigate: (page: PageId) => void;
+}
+
+const MAIN_ITEMS: { id: PageId; icon: ReactNode }[] = [
+  { id: "dashboard", icon: <DashboardOutlinedIcon /> },
+  { id: "attendance", icon: <CalendarMonthOutlinedIcon /> },
+  { id: "classes", icon: <GroupsOutlinedIcon /> },
+  { id: "students", icon: <PersonOutlineOutlinedIcon /> },
+  { id: "rfid", icon: <SensorsOutlinedIcon /> },
+  { id: "reports", icon: <BarChartOutlinedIcon /> },
+];
+
+function Sidebar({ current, onNavigate }: SidebarProps) {
+  const itemClass = (id: PageId) =>
+    id === current
+      ? "sidebar-item sidebar-item-active"
+      : "sidebar-item";
+
   return (
     <aside className="sidebar">
       <Box className="sidebar-navigation">
-
-        <Button
-          className="sidebar-item"
-          startIcon={<DashboardOutlinedIcon />}
-        >
-          Dashboard
-        </Button>
-
-        <Button
-          className="sidebar-item sidebar-item-active"
-          startIcon={<CalendarMonthOutlinedIcon />}
-        >
-          Anwesenheit
-        </Button>
-
-        <Button
-          className="sidebar-item"
-          startIcon={<GroupsOutlinedIcon />}
-        >
-          Klassen
-        </Button>
-
-        <Button
-          className="sidebar-item"
-          startIcon={<PersonOutlineOutlinedIcon />}
-        >
-          Schüler
-        </Button>
-
-        <Button
-          className="sidebar-item"
-          startIcon={<SensorsOutlinedIcon />}
-        >
-          RFID-Scans
-        </Button>
-
-        <Button
-          className="sidebar-item"
-          startIcon={<BarChartOutlinedIcon />}
-        >
-          Berichte
-        </Button>
-
+        {MAIN_ITEMS.map((item) => (
+          <Button
+            key={item.id}
+            className={itemClass(item.id)}
+            startIcon={item.icon}
+            onClick={() => onNavigate(item.id)}
+          >
+            {PAGE_TITLES[item.id]}
+          </Button>
+        ))}
       </Box>
 
       <Box className="sidebar-bottom">
         <Button
-          className="sidebar-item"
+          className={itemClass("settings")}
           startIcon={<SettingsOutlinedIcon />}
+          onClick={() => onNavigate("settings")}
         >
-          Einstellungen
+          {PAGE_TITLES.settings}
         </Button>
 
         <Typography className="sidebar-version">

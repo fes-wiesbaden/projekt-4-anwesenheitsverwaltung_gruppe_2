@@ -2,6 +2,8 @@ import AppHeader from "./components/layout/AppHeader";
 import Sidebar from "./components/layout/Sidebar";
 import { useState } from "react";
 import ListView from "./components/ListView";
+import PlaceholderPage from "./components/PlaceholderPage";
+import { PAGE_TITLES, type PageId } from "./navigation";
 import LoginView from "./components/LoginView";
 import "./css/main.css";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -21,6 +23,7 @@ function App() {
 );
 
   const [helpOpen, setHelpOpen] = useState(false);
+  const [page, setPage] = useState<PageId>("attendance");
 
   const handleLogout = () => {
     sessionStorage.removeItem("token");
@@ -38,12 +41,21 @@ function App() {
           />
 
           <div className="app-body">
+          <Sidebar
+            current={page}
+            onNavigate={setPage}
+          />
 
-            <Sidebar />
-
-            <main className="app-main">
+          <main className="app-main">
+            {page === "attendance" ? (
               <ListView />
-            </main>
+            ) : (
+              <PlaceholderPage
+                title={PAGE_TITLES[page]}
+                description="Diese Funktion wird mit dem Backend verbunden."
+              />
+            )}
+          </main>
 
           </div>
 
