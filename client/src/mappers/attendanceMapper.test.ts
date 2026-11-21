@@ -13,6 +13,7 @@ import {
   buildAttendanceRows,
   computeStats,
   formatPercent,
+  hasNoAttendanceData,
 } from "./attendanceMapper";
 
 const student = (
@@ -186,32 +187,36 @@ describe("buildAttendanceRows", () => {
 });
 
 describe("computeStats", () => {
-  it("zählt nicht erfasste Schüler als fehlend", () => {
-    const rows =
-      buildAttendanceRows(
-        [
-          student("1", "A"),
-          student("2", "B"),
-          student("3", "C"),
-        ],
-        [
-          attendance(
-            1,
-            "1",
-            "ANWESEND",
-            "2026-11-18T07:50:00",
-          ),
-        ],
-        "10A",
-      );
+  it("unterscheidet abwesende und nicht erfasste Schüler", () => {
+    const rows = buildAttendanceRows(
+      [
+        student("1", "A"),
+        student("2", "B"),
+        student("3", "C"),
+      ],
+      [
+        attendance(
+          1,
+          "1",
+          "ANWESEND",
+          "2026-11-18T07:50:00",
+        ),
+        attendance(
+          2,
+          "2",
+          "ABWESEND",
+          null,
+        ),
+      ],
+      "10A",
+    );
 
-    expect(
-      computeStats(rows),
-    ).toEqual({
+    expect(computeStats(rows)).toEqual({
       total: 3,
       present: 1,
       late: 0,
-      absent: 2,
+      absent: 1,
+      notRecorded: 1,
     });
   });
 
@@ -266,3 +271,47 @@ describe("computeStats", () => {
     expect(rows[0].checkOutRaw).toBeNull();
   });
 });
+
+describe("hasNoAttendanceData", () => {
+  it("erkennt einen Tag ohne erfassten Anwesenheitsstatus", () => {
+    const rows = buildAttendanceRows(
+      [
+        student("1", "A"),
+        student("2", "B"),
+      ],
+      [],
+      "10A",
+    );
+
+    expect(hasNoAttendanceData(rows)).toBe(true);
+    expect(computeStats(rows)).toEqual({
+      total: 2,
+      present: 0,
+      late: 0,
+      absent: 0,
+      notRecorded: 2,
+    });
+  });
+
+  it("liefert false bei erfasstem Status oder leerer Klasse", () => {
+    const rows = buildAttendanceRows(
+      [
+        student("1", "A"),
+        student("2", "B"),
+      ],
+      [
+        attendance(
+          1,
+          "1",
+          "ABWESEND",
+          null,
+        ),
+      ],
+      "10A",
+    );
+
+    expect(hasNoAttendanceData(rows)).toBe(false);
+    expect(hasNoAttendanceData([])).toBe(false);
+  });
+});
+

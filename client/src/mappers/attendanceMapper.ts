@@ -96,6 +96,7 @@ export interface AttendanceStats {
   present: number;
   late: number;
   absent: number;
+  notRecorded: number;
 }
 
 export function computeStats(
@@ -107,15 +108,24 @@ export function computeStats(
     rows.filter(
       (row) => row.status === status,
     ).length;
-
   return {
     total: rows.length,
     present: count("PRESENT"),
     late: count("LATE"),
-    absent:
-      count("ABSENT") +
-      count("NOT_RECORDED"),
+    absent: count("ABSENT"),
+    notRecorded: count("NOT_RECORDED"),
   };
+}
+
+export function hasNoAttendanceData(
+  rows: AttendanceRow[],
+): boolean {
+  return (
+    rows.length > 0 &&
+    rows.every(
+    (row) => row.status === "NOT_RECORDED",
+   )
+  );
 }
 
 export function formatPercent(

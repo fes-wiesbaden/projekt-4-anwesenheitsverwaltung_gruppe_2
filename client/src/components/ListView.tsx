@@ -64,6 +64,7 @@ import {
   buildAttendanceRows,
   computeStats,
   formatPercent,
+  hasNoAttendanceData,
 } from "../mappers/attendanceMapper";
 
 import type {
@@ -304,32 +305,30 @@ function ListView() {
   /*
    * Kennzahlen für die vier Dashboard-Karten.
    */
+  const noData = useMemo(
+    () => hasNoAttendanceData(classRows),
+    [classRows],
+  );
+
   const statistics = useMemo(() => {
-    const result =
-      computeStats(classRows);
+    const result = computeStats(classRows);
 
     return {
       ...result,
 
-      presentPercentage:
-        formatPercent(
-          result.present,
-          result.total,
-        ),
+      presentPercentage: noData
+        ? "–"
+        : formatPercent(result.present, result.total),
 
-      latePercentage:
-        formatPercent(
-          result.late,
-          result.total,
-        ),
+      latePercentage: noData
+        ? "–"
+        : formatPercent(result.late, result.total),
 
-      absentPercentage:
-        formatPercent(
-          result.absent,
-          result.total,
-        ),
+      absentPercentage: noData
+        ? "–"
+        : formatPercent(result.absent, result.total),
     };
-  }, [classRows]);
+  }, [classRows, noData]);
 
   /*
    * Suche und Statusfilter.
@@ -780,6 +779,24 @@ function ListView() {
             {loadError}
           </Alert>
         )}
+
+        {!isLoading && !loadError && noData && (
+          <Alert severity="info" sx={{ mb: 1.5 }}>
+            Für dieses Datum liegen keine erfassten
+            Anwesenheitsinformationen vor.
+            {` ${statistics.notRecorded} Schüler sind noch nicht erfasst.`}
+          </Alert>
+        )}
+
+        {!isLoading &&
+          !loadError &&
+          !noData &&
+          statistics.notRecorded > 0 && (
+            <Alert severity="info" sx={{ mb: 1.5 }}>
+              {statistics.notRecorded} Schüler sind
+              noch nicht erfasst.
+            </Alert>
+          )}
 
           {/* Kennzahlen */}
           <div className="stats-grid">
