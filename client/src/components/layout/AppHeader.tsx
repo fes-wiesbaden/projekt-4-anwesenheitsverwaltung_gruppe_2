@@ -13,12 +13,14 @@ import fesLogo from "../../assets/fes-logo.png";
 
 interface AppHeaderProps {
   username: string | null;
+  isAdmin: boolean;
   onHelp: () => void;
   onLogout: () => void;
 }
 
 function AppHeader({
   username,
+  isAdmin,
   onHelp,
   onLogout,
 }: AppHeaderProps) {
@@ -60,7 +62,7 @@ function AppHeader({
             <AccountCircleOutlinedIcon />
 
             <Typography variant="body2">
-              {username}
+              {username}{isAdmin ? " · Administrator" : ""}
             </Typography>
           </Box>
         )}

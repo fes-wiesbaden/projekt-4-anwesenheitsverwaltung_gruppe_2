@@ -7,12 +7,14 @@ import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import SensorsOutlinedIcon from "@mui/icons-material/SensorsOutlined";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
+import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 
-import { PAGE_TITLES, type PageId } from "../../navigation";
+import { canOpenPage, PAGE_TITLES, type PageId } from "../../navigation";
 
 interface SidebarProps {
   current: PageId;
+  isAdmin: boolean;
   onNavigate: (page: PageId) => void;
 }
 
@@ -23,9 +25,10 @@ const MAIN_ITEMS: { id: PageId; icon: ReactNode }[] = [
   { id: "students", icon: <PersonOutlineOutlinedIcon /> },
   { id: "rfid", icon: <SensorsOutlinedIcon /> },
   { id: "reports", icon: <BarChartOutlinedIcon /> },
+  { id: "admin", icon: <AdminPanelSettingsOutlinedIcon /> },
 ];
 
-function Sidebar({ current, onNavigate }: SidebarProps) {
+function Sidebar({ current, isAdmin, onNavigate }: SidebarProps) {
   const itemClass = (id: PageId) =>
     id === current
       ? "sidebar-item sidebar-item-active"
@@ -34,9 +37,11 @@ function Sidebar({ current, onNavigate }: SidebarProps) {
   return (
     <aside className="sidebar">
       <Box className="sidebar-navigation">
-        {MAIN_ITEMS.map((item) => (
+        {MAIN_ITEMS.filter((item) => canOpenPage(item.id, isAdmin)).map((item) => (
           <Button
             key={item.id}
+            aria-label={PAGE_TITLES[item.id]}
+            aria-current={current === item.id ? "page" : undefined}
             className={itemClass(item.id)}
             startIcon={item.icon}
             onClick={() => onNavigate(item.id)}

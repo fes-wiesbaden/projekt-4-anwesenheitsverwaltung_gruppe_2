@@ -92,3 +92,13 @@ export interface ApiPeriodReport {
   attendancePercentage: number;
   attendance: ApiReportRow[];
 }
+
+export type ApiUserRole = "ADMIN" | "TEACHER";
+
+export interface ApiAdminUser {
+  id: string;
+  displayName: string;
+  username: string;
+  createdAt: string;
+  role: ApiUserRole;
+}
