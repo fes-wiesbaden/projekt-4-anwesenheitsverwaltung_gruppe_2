@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   Alert,
@@ -134,6 +134,7 @@ function ListView() {
 
   const isToday =
     selectedDate === todayString;
+  const silentReloadRef = useRef(false);
     
 /*
  * Klassen aus dem Backend laden.
@@ -193,9 +194,14 @@ function ListView() {
 
     let cancelled = false;
 
+    const silent = silentReloadRef.current;
+    silentReloadRef.current = false;
+
     const loadAttendanceData = async () => {
-      setIsLoading(true);
-      setLoadError(null);
+      if (!silent) {
+        setIsLoading(true);
+        setLoadError(null);
+      }
 
       try {
         const [students, records] =
@@ -240,6 +246,10 @@ function ListView() {
           error,
         );
 
+        if (silent) {
+          return;
+        }
+
         setClassRows([]);
         setLoadError(
           "Anwesenheitsdaten konnten nicht geladen werden.",
@@ -261,6 +271,24 @@ function ListView() {
     selectedDate,
     reloadKey,
   ]);
+
+  useEffect(() => {
+    if (!isToday || !selectedClass || isLoading || isActing) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      silentReloadRef.current = true;
+
+      setReloadKey((current) => current + 1);
+    }, 30000);
+
+    return () => window.clearInterval(timer);
+  }, [isToday, selectedClass, isLoading, isActing]);
 
   const recentScanRows = useMemo(() => {
   return [...classRows]

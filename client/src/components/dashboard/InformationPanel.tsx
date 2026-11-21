@@ -31,8 +31,7 @@ function InformationPanel({
             <strong>Tipp</strong>
 
             <p>
-              Die Anwesenheit wird bei jedem
-              RFID-Scan automatisch aktualisiert.
+              Für den heutigen Tag wird die Liste alle 30 Sekunden automatisch aktualisiert.
             </p>
           </div>
         </div>
