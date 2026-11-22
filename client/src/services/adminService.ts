@@ -55,3 +55,50 @@ export async function createTeacher(input: CreateTeacherInput): Promise<ApiAdmin
     }),
   });
 }
+
+export interface AssignClassInput {
+  username: string;
+  classroomId: number;
+}
+
+export async function assignClass(
+  input: AssignClassInput,
+): Promise<unknown> {
+  if (!input.username.trim()) {
+    throw new Error("Bitte eine Lehrkraft wählen.");
+  }
+
+  if (
+    !Number.isInteger(input.classroomId) ||
+    input.classroomId <= 0
+  ) {
+    throw new Error("Bitte eine Klasse wählen.");
+  }
+
+  return apiFetch<unknown>("/auth/admin/assign-class", {
+    method: "POST",
+    body: JSON.stringify({
+      username: input.username.trim(),
+      classroomId: input.classroomId,
+    }),
+  });
+}
+
+export function describeAssignError(
+  error: unknown,
+): string {
+  if (error instanceof ApiError) {
+    switch (error.status) {
+      case 400:
+        return "Klassenzuweisung wurde abgelehnt.";
+      case 404:
+        return "Lehrkraft oder Klasse wurde nicht gefunden.";
+      case 401:
+        return "Bitte erneut anmelden.";
+      case 403:
+        return "Keine Berechtigung für die Klassenzuweisung.";
+    }
+  }
+
+  return "Die Klasse konnte nicht zugewiesen werden.";
+}

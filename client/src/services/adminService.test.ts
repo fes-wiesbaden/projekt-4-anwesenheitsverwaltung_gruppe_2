@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiFetch } from "../api/http";
-import { checkAdminAccess, getAdminUsers, createTeacher, validateTeacher } from "./adminService";
+import {
+  assignClass,
+  checkAdminAccess,
+  createTeacher,
+  describeAssignError,
+  getAdminUsers,
+  validateTeacher,
+} from "./adminService";
 
 vi.mock("../api/http", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/http")>();
@@ -72,5 +79,52 @@ describe("Lehrkraft anlegen", () => {
   it("reicht einen Konflikt des Backends weiter", async () => {
     request.mockRejectedValue(new ApiError(409, "Conflict"));
     await expect(createTeacher(input)).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+describe("Klasse zuweisen", () => {
+  it("sendet Benutzername und Klassen-ID", async () => {
+    request.mockResolvedValue({});
+
+    await assignClass({
+      username: " anna.schneider ",
+      classroomId: 2,
+    });
+
+    expect(request).toHaveBeenCalledWith(
+      "/auth/admin/assign-class",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          username: "anna.schneider",
+          classroomId: 2,
+        }),
+      },
+    );
+  });
+
+  it("lehnt eine ungültige Klassen-ID ab", async () => {
+    await expect(
+      assignClass({
+        username: "anna",
+        classroomId: 0,
+      }),
+    ).rejects.toThrow("Klasse");
+
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("beschreibt Fehler des Backends", () => {
+    expect(
+      describeAssignError(new ApiError(400, "x")),
+    ).toContain("abgelehnt");
+
+    expect(
+      describeAssignError(new ApiError(404, "x")),
+    ).toContain("nicht gefunden");
+
+    expect(
+      describeAssignError(new Error("x")),
+    ).toContain("nicht zugewiesen");
   });
 });
