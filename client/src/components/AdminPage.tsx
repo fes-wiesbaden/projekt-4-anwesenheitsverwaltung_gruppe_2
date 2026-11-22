@@ -5,6 +5,7 @@ import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import { ApiError } from "../api/http";
 import { getAdminUsers } from "../services/adminService";
+import CreateTeacherDialog from "./admin/CreateTeacherDialog";
 import type { ApiAdminUser } from "../types/api";
 
 const columns: GridColDef<ApiAdminUser>[] = [
@@ -32,6 +33,8 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +80,7 @@ function AdminPage() {
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {notice && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice(null)}>{notice}</Alert>}
 
       <div className="table-card">
         <div className="attendance-table-header">
@@ -87,6 +91,9 @@ function AdminPage() {
           <div className="table-controls">
             <TextField size="small" label="Benutzer suchen" value={search}
               onChange={(event) => setSearch(event.target.value)} />
+            <Button variant="contained" onClick={() => { setNotice(null); setCreateOpen(true); }} disabled={loading || Boolean(error)}>
+              Lehrkraft anlegen
+            </Button>
             <Button variant="outlined" startIcon={<RefreshOutlinedIcon />}
               onClick={refresh} disabled={loading}>Aktualisieren</Button>
           </div>
@@ -100,6 +107,16 @@ function AdminPage() {
             sx={{ border: 0 }} />
         </Box>
       </div>
+      <CreateTeacherDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={(user) => {
+          setCreateOpen(false);
+          setSearch("");
+          setNotice(`Lehrkraft ${user.displayName || user.username} wurde angelegt.`);
+          refresh();
+        }}
+      />
     </section>
   );
 }

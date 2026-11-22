@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiFetch } from "../api/http";
-import { checkAdminAccess, getAdminUsers } from "./adminService";
+import { checkAdminAccess, getAdminUsers, createTeacher, validateTeacher } from "./adminService";
 
 vi.mock("../api/http", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../api/http")>();
@@ -42,5 +42,35 @@ describe("Admin-Service", () => {
   it("gewährt bei unerwarteter Antwort keine Admin-Anzeige", async () => {
     request.mockResolvedValue("<html>Fehler</html>");
     expect(await checkAdminAccess()).toBe("unavailable");
+  });
+});
+
+describe("Lehrkraft anlegen", () => {
+  const input = { displayname: " Demo Lehrkraft ", username: " demo.teacher ", password: "Testpasswort123!" };
+
+  it("sendet die erwarteten Daten mit fester Rolle TEACHER", async () => {
+    const user = { id: "2", displayName: "Demo Lehrkraft", username: "demo.teacher", role: "TEACHER", createdAt: "2026-11-22" };
+    request.mockResolvedValue(user);
+    expect(await createTeacher(input)).toEqual(user);
+    expect(request).toHaveBeenCalledWith("/auth/admin/createUser", {
+      method: "POST",
+      body: JSON.stringify({ displayname: "Demo Lehrkraft", username: "demo.teacher", password: input.password, role: "TEACHER" }),
+    });
+  });
+  it("lehnt neun Zeichen vor der API-Anfrage ab", async () => {
+    await expect(createTeacher({ ...input, password: "123456789" })).rejects.toThrow("mindestens 10");
+    expect(request).not.toHaveBeenCalled();
+  });
+  it("akzeptiert exakt zehn Zeichen", () => {
+    expect(validateTeacher({ ...input, password: "1234567890" })).toBeNull();
+  });
+  it("prüft leere Namen und Benutzernamen sowie Leerzeichen im Benutzernamen", () => {
+    expect(validateTeacher({ ...input, displayname: " " })).not.toBeNull();
+    expect(validateTeacher({ ...input, username: " " })).not.toBeNull();
+    expect(validateTeacher({ ...input, username: "demo teacher" })).not.toBeNull();
+  });
+  it("reicht einen Konflikt des Backends weiter", async () => {
+    request.mockRejectedValue(new ApiError(409, "Conflict"));
+    await expect(createTeacher(input)).rejects.toMatchObject({ status: 409 });
   });
 });
