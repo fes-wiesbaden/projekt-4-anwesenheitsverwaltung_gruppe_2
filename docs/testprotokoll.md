@@ -66,7 +66,7 @@ Status: **bestanden** = berichteter oder sichtbarer Nachweis vorhanden; **teilwe
 | Nr. | Problem | Ursache / Befund | Maßnahme / Stand |
 |---|---|---|---|
 | P1 | Abfragen nach längerer Pause abgelehnt | HTTP 403 beobachtet; erneuter Login führte zu HTTP 200. Ein 403 allein beweist keinen abgelaufenen Token. | Token-Ablaufprüfung beim App-Start implementiert; Browser-Negativtest offen |
-| P2 | Nicht erfasste Schüler als abwesend gezählt | Mapper summierte ABSENT und NOT_RECORDED | Getrennte Zählung implementiert; automatische Tests und Browser-Test T06 bestanden |
+| P2 | Nicht erfasste Schüler als abwesend gezählt | ABSENT und NOT_RECORDED wurden nicht ausreichend getrennt | Zählung korrigiert; T06 im Browser bestanden |
  T06 | Anwesenheit 22.11.2026, 10A | Hinweis bei fehlenden Anwesenheitsdaten, Abwesend 0, Prozentwert „–“, keine Fehlenden-Warnung | Hinweis und korrekte Werte im Browser sichtbar | bestanden |
 | P3 | Anzeige „Letzte RFID-Scans“ irreführend | Es wurden Check-ins statt RFID-Ereignissen angezeigt | In „Letzte Check-ins“ umbenannt; in Screenshots bestätigt |
 | P4 | Funktionsloser Button „Alle anzeigen“ | Kein Klick-Handler | Entfernt |
