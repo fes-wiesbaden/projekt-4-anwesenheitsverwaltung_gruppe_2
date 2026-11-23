@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.jspecify.annotations.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -37,6 +38,9 @@ public class SecurityConfig {
     private final UserDetailsService userDetailsService;
     private final IPBlockListFilter blockListFilter;
 
+    @Value("${app.cors.allowed-origins:http://localhost:5173, http://10.93.130.21:5173/ }")
+    private String allowedOrigins;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
         http
@@ -46,7 +50,8 @@ public class SecurityConfig {
                     public @NonNull CorsConfiguration getCorsConfiguration(@NonNull HttpServletRequest request) {
                         CorsConfiguration corsConfiguration = new CorsConfiguration();
                         corsConfiguration.setAllowCredentials(true);
-                        corsConfiguration.setAllowedOrigins(List.of("http://localhost:5173"));
+                        corsConfiguration.setAllowedOrigins(java.util.Arrays.stream(allowedOrigins.split(","))
+                                .map(String::trim).filter(origin -> !origin.isEmpty()).toList());
                         corsConfiguration.setAllowedMethods(Collections.singletonList("*"));
                         corsConfiguration.setAllowedHeaders(Collections.singletonList("*"));
                         corsConfiguration.setMaxAge(Duration.ofMinutes(5L));
@@ -54,13 +59,23 @@ public class SecurityConfig {
                     }
                 }))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/admin/**", "/api/rfid/**", "/api/student/students",
+                                "/api/attendance/checkin/**", "/api/room/create").hasRole("ADMIN")
+                        .requestMatchers("/api/student/myStudents", "/api/student/*",
+                                "/api/attendance/student/*/checkout", "/api/attendance/student/*",
+                                "/api/attendance/class/*/checkout", "/api/attendance/class/*/session",
+                                "/api/attendance/class/*/session/attendance", "/api/attendance/session/*/audit")
+                                .authenticated()
+                        .requestMatchers("/api/auth/test").authenticated()
+                        .requestMatchers("/api-docs", "/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/auth/test", "/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/student/**").permitAll()
                         .requestMatchers("/api/rfid/**").permitAll()
                         .requestMatchers("/api/classroom/**").authenticated()
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**").permitAll()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

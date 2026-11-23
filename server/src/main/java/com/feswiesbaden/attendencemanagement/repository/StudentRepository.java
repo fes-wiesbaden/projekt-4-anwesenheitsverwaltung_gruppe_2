@@ -24,11 +24,12 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
     Student findByRfidChip_Id(UUID rfidChip_id);
 
     @Query("""
-                SELECT s
-                FROM Classroom c
-                JOIN c.teachers t
-                JOIN c.students s
-                WHERE t.username = :username
+                SELECT DISTINCT s
+                FROM Student s
+                WHERE s.classroom.id IN (
+                    SELECT c.id FROM Classroom c JOIN c.teachers t WHERE t.username = :username
+                )
+                OR s.classroom.id = (SELECT u.myClassroom.id FROM User u WHERE u.username = :username)
             """)
     List<Student> findStudentsByTeacherUsername(@Param("username") String username);
 }

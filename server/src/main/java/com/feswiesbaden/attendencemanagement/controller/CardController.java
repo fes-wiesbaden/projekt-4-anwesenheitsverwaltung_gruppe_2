@@ -10,8 +10,8 @@ import com.feswiesbaden.attendencemanagement.repository.StudentRepository;
 import com.feswiesbaden.attendencemanagement.service.MqttService;
 import com.feswiesbaden.attendencemanagement.service.SetRfidService;
 import lombok.RequiredArgsConstructor;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import com.feswiesbaden.attendencemanagement.service.SystemAuditLogService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +32,7 @@ public class CardController {
     private final StudentRepository studentRepository;
 
     private final RfidRepository rfidRepository;
+    private final SystemAuditLogService auditLogService;
 
     @PostMapping("/set")
     public ResponseEntity<SetRfidResponseDto> SetRfid() {
@@ -45,10 +46,14 @@ public class CardController {
         return ResponseEntity.accepted().body(new SetRfidResponseDto(requestId, "PENDING"));
     }
 
-//    @GetMapping("/set/status/{requestId}")
-//    public ResponseEntity<SetRfidResponseDto> SetRfidStatus(@PathVariable String requestId) {
-//
-//    }
+    @GetMapping("/set/status/{requestId}")
+    public ResponseEntity<SetRfidResponseDto> setRfidStatus(@PathVariable String requestId) {
+        String status = setRfidService.getStatus(requestId);
+        if (SetRfidService.STATUS_NOT_FOUND.equals(status)) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(new SetRfidResponseDto(requestId, status));
+    }
 
     @GetMapping("/getall")
     public ResponseEntity<List<Rfid_chip>> GetAll() {
@@ -57,9 +62,6 @@ public class CardController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Rfid_chip> GetCardById(@PathVariable UUID id) {
-        System.out.println(id);
-        boolean exist = rfidRepository.existsById(id);
-        System.out.println(exist);
         return rfidRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -67,15 +69,13 @@ public class CardController {
 
     @PostMapping("/assign-rfid")
     @Transactional
-    public ResponseEntity<AssignRfidResponseDto> AssignRfid(@RequestBody AssignRfidDto dto) {
-        if (dto.studentId == null || dto.rfid_Id == null) return ResponseEntity.badRequest().build();
+    public ResponseEntity<AssignRfidResponseDto> AssignRfid(@RequestBody AssignRfidDto dto, Authentication auth) {
+        if (dto == null || dto.studentId == null || dto.rfid_Id == null) return ResponseEntity.badRequest().build();
 
         if (!studentRepository.existsById(dto.studentId)) {
-            System.out.println("student doesnt exist");
             return ResponseEntity.notFound().build();
         }
         if (!rfidRepository.existsById(dto.rfid_Id)) {
-            System.out.println("rfid doesnt exist");
             return ResponseEntity.notFound().build();
         }
 
@@ -88,16 +88,50 @@ public class CardController {
         if (existingCard.isEmpty()) return ResponseEntity.notFound().build();
 
         Rfid_chip Card = existingCard.get();
+        if (!Card.isActive()) return ResponseEntity.status(409).build();
 
         Optional<Student> previousStudent = studentRepository.findByRfidChipId(Card.getId());
         if (previousStudent.isPresent() && !previousStudent.get().getId().equals(student.getId())) {
-            previousStudent.get().setRfidChip(null);
-            studentRepository.save(previousStudent.get());
+            return ResponseEntity.status(409).build();
+        }
+        if (student.getRfidChip() != null && !student.getRfidChip().getId().equals(Card.getId())) {
+            return ResponseEntity.status(409).build();
         }
 
+        String previousCardId = student.getRfidChip() == null ? null : student.getRfidChip().getId().toString();
         student.setRfidChip(Card);
         studentRepository.save(student);
+        auditLogService.record(auth.getName(), "RFID_ASSIGNED", "STUDENT", student.getId().toString(),
+                "Assigned RFID card " + Card.getChipId() + " to student " + student.getUsername(),
+                previousCardId, Card.getId().toString());
 
         return ResponseEntity.ok(new AssignRfidResponseDto());
     }
+
+    @DeleteMapping("/assign/{studentId}")
+    @Transactional
+    public ResponseEntity<Void> UnassignRfid(@PathVariable UUID studentId, Authentication auth) {
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null) return ResponseEntity.notFound().build();
+        if (student.getRfidChip() == null) return ResponseEntity.noContent().build();
+        String previousCardId = student.getRfidChip().getId().toString();
+        student.setRfidChip(null);
+        studentRepository.save(student);
+        auditLogService.record(auth.getName(), "RFID_UNASSIGNED", "STUDENT", student.getId().toString(),
+                "Unassigned RFID card from student " + student.getUsername(), previousCardId, null);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/active")
+    @Transactional
+    public ResponseEntity<Rfid_chip> SetCardActive(@PathVariable UUID id, @RequestParam boolean active, Authentication auth) {
+        Rfid_chip card = rfidRepository.findById(id).orElse(null);
+        if (card == null) return ResponseEntity.notFound().build();
+        boolean oldActive = card.isActive();
+        card.setActive(active);
+        auditLogService.record(auth.getName(), active ? "RFID_ACTIVATED" : "RFID_DEACTIVATED", "RFID_CARD",
+                id.toString(), "Changed RFID card active state", String.valueOf(oldActive), String.valueOf(active));
+        return ResponseEntity.ok(rfidRepository.save(card));
+    }
+
 }

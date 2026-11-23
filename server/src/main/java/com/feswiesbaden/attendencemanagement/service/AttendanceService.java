@@ -1,123 +1,120 @@
 package com.feswiesbaden.attendencemanagement.service;
 
 import com.feswiesbaden.attendencemanagement.entity.*;
+import com.feswiesbaden.attendencemanagement.repository.AttendanceAuditRepository;
 import com.feswiesbaden.attendencemanagement.repository.AttendanceRepository;
-import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
 import com.feswiesbaden.attendencemanagement.repository.RfidRepository;
 import com.feswiesbaden.attendencemanagement.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.sql.Date;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AttendanceService {
-
     private final RfidRepository rfidRepository;
-
     private final StudentRepository studentRepository;
-
-    private final ClassroomRepository classroomRepository;
-
     private final AttendanceRepository attendanceRepository;
+    private final AttendanceAuditRepository auditRepository;
+    private final AttendanceSessionService sessionService;
+    private final AttendanceSettingsService attendanceSettingsService;
+    private final SystemAuditLogService systemAuditLogService;
 
-    private final TimetableService timetableService;
+    @Value("${app.attendance.zone:Europe/Berlin}")
+    private String attendanceZone;
 
-    public void checkin(String chipId) {
-        if (chipId.isEmpty()) return;
-        if (!rfidRepository.existsByChipId(chipId)) return;
 
-        Rfid_chip rfidChip = rfidRepository.findByChipId(chipId);
-        Student student = studentRepository.findByRfidChip_Id(rfidChip.getId());
-
-        doCheckin(student.getId());
-    }
-
-    public void checkin(UUID studentId) {
-        doCheckin(studentId);
-    }
-
-    private void doCheckin(UUID studentId) {
-
-        LocalDateTime checkinTime = LocalDateTime.now();
-        LocalDate date = checkinTime.toLocalDate();
-
+    @Transactional
+    public void checkin(UUID studentId, String actorUsername) {
         Student student = studentRepository.findById(studentId).orElseThrow();
-
-        Attendance attendance = attendanceRepository.findByStudent_IdAndDate(studentId, date);
-        if (attendance == null) {
-            attendance = new Attendance();
-            attendance.setDate(date);
-            attendance.setStudent(student);
+        if (student.getClassroom() == null) throw new IllegalStateException("Student is not assigned to a class.");
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(attendanceZone));
+        AttendanceSession session = sessionService.getActiveSession(student.getClassroom(), now)
+                .orElseThrow(() -> new IllegalStateException("No active timetable session for this class."));
+        Attendance attendance = attendanceRepository.findByStudent_IdAndSession_Id(studentId, session.getId())
+                .orElseGet(() -> {
+                    Attendance created = new Attendance();
+                    created.setDate(session.getSessionDate());
+                    created.setStudent(student);
+                    created.setSession(session);
+                    return created;
+                });
+        if (attendance.getCheckin() != null || attendance.getCheckout() != null) {
+            throw new IllegalStateException("Student already has an attendance event in this session.");
         }
-
-        if (attendance.getCheckin() == null) {
-            attendance.setCheckin(checkinTime);
-            attendance.setStatus(Attendance_status.ANWESEND);
-        }
-
-        attendanceRepository.save(attendance);
-    }
-
-
-    public void checkout(String chipId) {
-        System.out.println("Student " + chipId + " checking out");
-        // TODO
-
-        if (chipId.isEmpty()) return;
-        if (!rfidRepository.existsByChipId(chipId)) return;
-
-        Rfid_chip rfidChip = rfidRepository.findByChipId(chipId);
-        Student student = studentRepository.findByRfidChip_Id(rfidChip.getId());
-
-        LocalDateTime checkoutTime = LocalDateTime.now();
-
-        doCheckout(student.getId(), checkoutTime);
-    }
-
-    private void doCheckout(UUID studentId, LocalDateTime checkoutTime) {
-
-        if (checkoutTime == null) {
-            checkoutTime = LocalDateTime.now();
-        }
-        Attendance attendance = attendanceRepository.findByStudent_IdAndDate(studentId, checkoutTime.toLocalDate());
-        if (attendance == null || attendance.getCheckin() == null || attendance.getCheckout() != null) {
-            return;
-        }
-        attendance.setCheckout(checkoutTime);
-        attendanceRepository.save(attendance);
+        registerCheckin(session, attendance, now,
+                actorUsername == null || actorUsername.isBlank() ? "ADMIN" : actorUsername,
+                AttendanceAuditEventType.MANUAL_CHECK_IN, "Manual check-in by administrator");
     }
 
     @Transactional
-    public int checkoutClass(Long classroomId, LocalDate date) {
+    public ScanResult handleScan(String chipId) {
+        if (chipId == null || chipId.isBlank()) return ScanResult.noTime(ScanResult.UNKNOWN_CARD);
+        String normalized = normalizeUid(chipId);
+        Rfid_chip card = rfidRepository.findByChipId(normalized);
+        if (card == null) return ScanResult.noTime(ScanResult.UNKNOWN_CARD);
 
-        LocalTime scheduled = timetableService.findCheckoutTime(classroomId, date).orElse(null);
-        LocalDateTime checkoutTime = scheduled != null ? date.atTime(scheduled) : LocalDateTime.now();
+        if (!card.isActive()) return ScanResult.noTime(ScanResult.CARD_INACTIVE);
+        Student student = studentRepository.findByRfidChip_Id(card.getId());
+        if (student == null) return ScanResult.noTime(ScanResult.NOT_ASSIGNED);
+        if (student.getClassroom() == null) return ScanResult.noTime(ScanResult.NOT_ASSIGNED);
 
-        int checkedOut = 0;
-        for (Student student : studentRepository.findByClassroom_Id(classroomId)) {
-            Attendance attendance = attendanceRepository.findByStudent_IdAndDate(student.getId(), date);
-            if (attendance != null && attendance.getCheckin() != null && attendance.getCheckout() == null) {
-                attendance.setCheckout(checkoutTime);
-                attendanceRepository.save(attendance);
-                checkedOut++;
-            }
+        LocalDateTime now = LocalDateTime.now(ZoneId.of(attendanceZone));
+        AttendanceSession session = sessionService.getActiveSession(student.getClassroom(), now).orElse(null);
+        if (session == null) return ScanResult.noTime(ScanResult.NO_ACTIVE_SESSION);
+
+        Attendance attendance = attendanceRepository.findByStudent_IdAndSession_Id(student.getId(), session.getId())
+                .orElse(null);
+        if (attendance == null) {
+            // Normally created as ABSENT when the session starts; keep this for roster changes mid-session.
+            attendance = new Attendance();
+            attendance.setDate(session.getSessionDate());
+            attendance.setStudent(student);
+            attendance.setSession(session);
+            attendance.setStatus(Attendance_status.ABWESEND);
         }
-        return checkedOut;
+
+        if (attendance.getCheckout() != null) {
+            return ScanResult.withTime(ScanResult.SESSION_CLOSED, attendance.getCheckout());
+        }
+        if (attendance.getCheckin() != null) {
+            return ScanResult.withTime(ScanResult.ALREADY_CHECKED_IN, attendance.getCheckin());
+        }
+
+        registerCheckin(session, attendance, now, "RFID",
+                AttendanceAuditEventType.CHECKED_IN, "RFID scan by student card");
+        return ScanResult.withTime(ScanResult.CHECKED_IN, now);
     }
 
-    public void check(String chipId) {
-        System.out.println("Student " + chipId + " checking");
-        // TODO
+    private void registerCheckin(AttendanceSession session, Attendance attendance,
+                                 LocalDateTime now, String actor, AttendanceAuditEventType eventType, String details) {
+        if (attendance.getCheckin() != null || attendance.getCheckout() != null) return;
+        attendance.setCheckin(now);
+        attendance.setStatus(LateArrivalPolicy.isLate(now, session.getScheduledStart(),
+                attendanceSettingsService.getLateGraceMinutes())
+                ? Attendance_status.VERSPAETET : Attendance_status.ANWESEND);
+        attendanceRepository.save(attendance);
+
+        AttendanceAuditEvent event = new AttendanceAuditEvent();
+        event.setAttendance(attendance);
+        event.setSession(session);
+        event.setEventType(eventType);
+        event.setEventAt(now);
+        event.setActorUsername(actor);
+        event.setDetails(details);
+        auditRepository.save(event);
+        systemAuditLogService.record(actor, eventType.name(), "ATTENDANCE", attendance.getId().toString(),
+                details, null, "checkin=" + now + "; status=" + attendance.getStatus().name());
+    }
+
+    private String normalizeUid(String chipId) {
+        return chipId.trim().replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
     }
 
     public record ScanResult(String status, String time) {
@@ -125,52 +122,13 @@ public class AttendanceService {
         public static final String ALREADY_CHECKED_IN = "ALREADY_CHECKED_IN";
         public static final String UNKNOWN_CARD = "UNKNOWN_CARD";
         public static final String NOT_ASSIGNED = "NOT_ASSIGNED";
+        public static final String NO_ACTIVE_SESSION = "NO_ACTIVE_SESSION";
+        public static final String SESSION_CLOSED = "SESSION_CLOSED";
+        public static final String CARD_INACTIVE = "CARD_INACTIVE";
 
-        public static ScanResult noTime(String status) {
-            return new ScanResult(status, null);
-        }
-
+        public static ScanResult noTime(String status) { return new ScanResult(status, null); }
         public static ScanResult withTime(String status, LocalDateTime time) {
             return new ScanResult(status, time.format(DateTimeFormatter.ofPattern("HH:mm:ss")));
         }
-    }
-
-    public ScanResult handleScan(String chipId) {
-        if (chipId == null || chipId.isBlank()) {
-            return ScanResult.noTime(ScanResult.UNKNOWN_CARD);
-        }
-
-        Rfid_chip rfidChip = rfidRepository.findByChipId(chipId);
-        if (rfidChip == null) {
-            System.out.println("Scan: unknown card " + chipId);
-            return ScanResult.noTime(ScanResult.UNKNOWN_CARD);
-        }
-
-        Student student = studentRepository.findByRfidChip_Id(rfidChip.getId());
-        if (student == null) {
-            System.out.println("Scan: card " + chipId + " not assigned to a student");
-            return ScanResult.noTime(ScanResult.NOT_ASSIGNED);
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        LocalDate today = now.toLocalDate();
-
-        Attendance attendance = attendanceRepository.findByStudent_IdAndDate(student.getId(), today);
-        if (attendance != null && attendance.getCheckin() != null) {
-            System.out.println("Scan: " + student.getDisplayName() + " already checked in at " + attendance.getCheckin());
-            return ScanResult.withTime(ScanResult.ALREADY_CHECKED_IN, attendance.getCheckin());
-        }
-
-        if (attendance == null) {
-            attendance = new Attendance();
-            attendance.setDate(today);
-            attendance.setStudent(student);
-            attendance.setStatus(Attendance_status.ANWESEND);
-        }
-        attendance.setCheckin(now);
-        attendanceRepository.save(attendance);
-
-        System.out.println("Scan: " + student.getDisplayName() + " checked in at " + now);
-        return ScanResult.withTime(ScanResult.CHECKED_IN, now);
     }
 }
