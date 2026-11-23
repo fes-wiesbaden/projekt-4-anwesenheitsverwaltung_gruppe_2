@@ -45,10 +45,10 @@ export function validateTeacher(input: CreateTeacherInput): string | null {
 export async function createTeacher(input: CreateTeacherInput): Promise<ApiAdminUser> {
   const error = validateTeacher(input);
   if (error) throw new Error(error);
-  return apiFetch<ApiAdminUser>("/auth/admin/createUser", {
+  return apiFetch<ApiAdminUser>("/auth/admin/teacher/create", {
     method: "POST",
     body: JSON.stringify({
-      displayname: input.displayname.trim(),
+      displayName: input.displayname.trim(),
       username: input.username.trim(),
       password: input.password,
       role: "TEACHER",

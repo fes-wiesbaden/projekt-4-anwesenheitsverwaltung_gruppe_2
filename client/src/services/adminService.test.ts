@@ -59,9 +59,9 @@ describe("Lehrkraft anlegen", () => {
     const user = { id: "2", displayName: "Demo Lehrkraft", username: "demo.teacher", role: "TEACHER", createdAt: "2026-11-22" };
     request.mockResolvedValue(user);
     expect(await createTeacher(input)).toEqual(user);
-    expect(request).toHaveBeenCalledWith("/auth/admin/createUser", {
+    expect(request).toHaveBeenCalledWith("/auth/admin/teacher/create", {
       method: "POST",
-      body: JSON.stringify({ displayname: "Demo Lehrkraft", username: "demo.teacher", password: input.password, role: "TEACHER" }),
+      body: JSON.stringify({ displayName: "Demo Lehrkraft", username: "demo.teacher", password: input.password, role: "TEACHER" }),
     });
   });
   it("lehnt neun Zeichen vor der API-Anfrage ab", async () => {
