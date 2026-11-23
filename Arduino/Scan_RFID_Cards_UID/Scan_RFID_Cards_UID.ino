@@ -3,12 +3,15 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <DIYables_LCD_I2C.h>
+#include <time.h>
+
+unsigned long lastTimeDisplay = 0;
 
 // ---------- WiFi & MQTT ----------
 const char* WIFI_SSID = "FES-SuS";
 const char* WIFI_PASSWORD = "SuS-WLAN!Key24";
 
-const char MQTT_BROKER_ADRRESS[] = "10.93.137.8";
+const char MQTT_BROKER_ADRRESS[] = "10.93.138.106";
 const int MQTT_PORT = 1883;
 const char MQTT_CLIENT_ID[] = "esp32-rfid-reader";
 const char MQTT_USERNAME[] = "";
@@ -115,6 +118,26 @@ void setup() {
   // setup WIFI
   setupWifi();
 
+  // time
+  // Berlin time zone: CET in winter, CEST in summer
+  configTzTime(
+    "CET-1CEST,M3.5.0,M10.5.0/3",
+    "europe.pool.ntp.org",
+    "pool.ntp.org",
+    "time.google.com");
+
+  // Wait up to 15 seconds for NTP synchronization
+  struct tm timeinfo;
+  Serial.println("Waiting for time synchronization...");
+
+  if (getLocalTime(&timeinfo, 15000)) {
+    Serial.println("Time synchronized!");
+    Serial.println(&timeinfo, "%H:%M:%S %d/%m/%Y");
+  } else {
+    Serial.println("NTP synchronization failed!");
+    lcd_write("Time sync failed", "Check internet");
+  }
+
   // setup MQTT
   setup_mqtt();
 
@@ -124,6 +147,8 @@ void setup() {
 
 void loop() {
   loop_mqtt();
+
+  display_time();
 
   if (scanPending && millis() - scanPendingSince > SCAN_RESULT_TIMEOUT_MS) {
     scanPending = false;
@@ -145,6 +170,45 @@ void loop() {
     rfid.PICC_HaltA();
     rfid.PCD_StopCrypto1();
   }
+}
+
+void display_time() {
+  // Update the LCD once per second
+  if (millis() - lastTimeDisplay < 1000) {
+    return;
+  }
+
+  lastTimeDisplay = millis();
+
+  struct tm timeinfo;
+
+  // Do not display invalid time
+  if (!getLocalTime(&timeinfo, 100)) {
+    Serial.println("Waiting for valid time...");
+    return;
+  }
+
+  char timeBuffer[17];
+  char dateBuffer[17];
+
+  strftime(timeBuffer, sizeof(timeBuffer), "%H:%M:%S", &timeinfo);
+  strftime(dateBuffer, sizeof(dateBuffer), "%d/%m/%Y", &timeinfo);
+
+  Serial.print("Time: ");
+  Serial.println(timeBuffer);
+
+  Serial.print("Date: ");
+  Serial.println(dateBuffer);
+
+  lcd.setCursor(0, 0);
+  lcd.print("TIME:");
+  lcd.print(timeBuffer);
+  lcd.print("   ");
+
+  lcd.setCursor(0, 1);
+  lcd.print("DATE:");
+  lcd.print(dateBuffer);
+  lcd.print("  ");
 }
 
 void handleCardRead(const String& uid) {
@@ -197,7 +261,6 @@ void setupWifi() {
   delay(1000);
   Serial.println(WiFi.localIP());
 }
-
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived on topic: ");
@@ -301,7 +364,6 @@ void reconnect_mqtt() {
     delay(5000);
   }
 }
-
 
 void setup_mqtt() {
   client.setServer(MQTT_BROKER_ADRRESS, MQTT_PORT);
