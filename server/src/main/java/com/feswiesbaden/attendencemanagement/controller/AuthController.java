@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.feswiesbaden.attendencemanagement.dto.requests.LoginDto;
 import com.feswiesbaden.attendencemanagement.dto.response.LoginResponseDto;
 import com.feswiesbaden.attendencemanagement.dto.response.LogoutResponseDto;
+import com.feswiesbaden.attendencemanagement.entity.User;
 import com.feswiesbaden.attendencemanagement.jwt.JwtUtil;
+import com.feswiesbaden.attendencemanagement.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +28,7 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginDto request) {
@@ -33,12 +36,17 @@ public class AuthController {
                 || request.getPassword() == null || request.getPassword().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
+        String username = request.getUsername().trim();
         try {
             var authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getUsername().trim(), request.getPassword()));
             String token = jwtUtil.generateToken(authentication);
-            return ResponseEntity.ok(new LoginResponseDto(token));
+
+            User user = userRepository.findByUsername(username);
+            boolean firstLogin = user != null && user.isFirstLogin();
+
+            return ResponseEntity.ok(new LoginResponseDto(token, firstLogin));
         } catch (AuthenticationException ex) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }

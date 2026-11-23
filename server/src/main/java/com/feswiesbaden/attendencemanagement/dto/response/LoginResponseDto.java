@@ -11,4 +11,5 @@ import lombok.Setter;
 @AllArgsConstructor
 public class LoginResponseDto {
     public String token;
+    private boolean firstLogin;
 }
