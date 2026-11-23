@@ -28,7 +28,6 @@ public class ReportService {
         Set<Long> ids = new HashSet<>();
         if (u.getMyClassroom() != null) ids.add(u.getMyClassroom().getId());
         if (u.getClasses() != null) u.getClasses().stream().filter(Objects::nonNull).map(Classroom::getId).forEach(ids::add);
-        if (u.getRole() != Role.ADMIN) return ids;
         return ids;
     }
     private List<Attendance> scoped(String username, LocalDate from, LocalDate to, Long classId) {

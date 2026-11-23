@@ -8,7 +8,7 @@ import com.feswiesbaden.attendencemanagement.entity.Role;
 @Setter
 public class RegisterDto {
 
-    public String displayname;
+    public String displayName;
     public String username;
     public String password;
     public Role role;
