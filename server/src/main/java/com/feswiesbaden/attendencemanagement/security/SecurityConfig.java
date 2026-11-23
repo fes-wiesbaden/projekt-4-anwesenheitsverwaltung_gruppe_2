@@ -59,10 +59,6 @@ public class SecurityConfig {
                     }
                 }))
                 .authorizeHttpRequests(auth -> auth
-<<<<<<< Updated upstream
-=======
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/admin/**", "/api/rfid/**", "/api/student/students",
                                 "/api/attendance/checkin/**", "/api/room/create").hasRole("ADMIN")
@@ -73,17 +69,12 @@ public class SecurityConfig {
                                 .authenticated()
                         .requestMatchers("/api/auth/test").authenticated()
                         .requestMatchers("/api-docs", "/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-<<<<<<< Updated upstream
-=======
-=======
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/auth/test", "/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/student/**").permitAll()
                         .requestMatchers("/api/rfid/**").permitAll()
                         .requestMatchers("/api/classroom/**").authenticated()
->>>>>>> Stashed changes
->>>>>>> Stashed changes
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
