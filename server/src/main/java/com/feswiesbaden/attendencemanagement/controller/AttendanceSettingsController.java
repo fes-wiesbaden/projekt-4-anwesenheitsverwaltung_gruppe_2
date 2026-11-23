@@ -21,14 +21,14 @@ public class AttendanceSettingsController {
 
     @GetMapping("/late-threshold")
     public ResponseEntity<?> getLateThreshold(Authentication auth) {
-        if (!isAdmin(auth)) return ResponseEntity.status(403).body(Map.of("error", "Admin access required."));
+        if (IsUserAdmin(auth)) return ResponseEntity.status(403).body(Map.of("error", "Admin access required."));
         return ResponseEntity.ok(Map.of("lateGraceMinutes", settingsService.getLateGraceMinutes(),
                 "meaning", "A check-in at or after scheduled start plus this many minutes is marked late."));
     }
 
     @PutMapping("/late-threshold")
     public ResponseEntity<?> updateLateThreshold(@RequestBody Map<String, Object> body, Authentication auth) {
-        if (!isAdmin(auth)) return ResponseEntity.status(403).body(Map.of("error", "Admin access required."));
+        if (IsUserAdmin(auth)) return ResponseEntity.status(403).body(Map.of("error", "Admin access required."));
         if (body == null || !(body.get("lateGraceMinutes") instanceof Number number)) {
             return ResponseEntity.badRequest().body(Map.of("error", "Provide lateGraceMinutes as an integer."));
         }
@@ -43,9 +43,9 @@ public class AttendanceSettingsController {
         return ResponseEntity.ok(Map.of("lateGraceMinutes", saved.getLateGraceMinutes()));
     }
 
-    private boolean isAdmin(Authentication auth) {
-        if (auth == null) return false;
+    private boolean IsUserAdmin(Authentication auth) {
+        if (auth == null) return true;
         var user = userRepository.findByUsername(auth.getName());
-        return user != null && user.getRole() == Role.ADMIN;
+        return user == null || user.getRole() != Role.ADMIN;
     }
 }

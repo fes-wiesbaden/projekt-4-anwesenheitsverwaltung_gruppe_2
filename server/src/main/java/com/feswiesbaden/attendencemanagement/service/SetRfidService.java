@@ -26,13 +26,12 @@ public class SetRfidService {
 
     private final ConcurrentHashMap<String, PendingSet> pendingSets = new ConcurrentHashMap<>();
 
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "rfid-set-cleaner");
-        t.setDaemon(true);
-        return t;
-    });
-
     public SetRfidService() {
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "rfid-set-cleaner");
+            t.setDaemon(true);
+            return t;
+        });
         scheduler.scheduleAtFixedRate(this::cleanUp,
                 CLEANUP_INTERVAL_SECONDS, CLEANUP_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }

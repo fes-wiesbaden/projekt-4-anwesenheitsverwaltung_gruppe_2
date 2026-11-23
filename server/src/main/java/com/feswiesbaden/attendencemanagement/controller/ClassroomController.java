@@ -25,8 +25,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.*;
-
-import com.feswiesbaden.attendencemanagement.entity.Attendance;
 import com.feswiesbaden.attendencemanagement.dto.response.AttendanceRecordResponseDto;
 import com.feswiesbaden.attendencemanagement.service.ClassroomService;
 

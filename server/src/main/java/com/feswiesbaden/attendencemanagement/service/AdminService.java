@@ -60,7 +60,7 @@ public class AdminService {
     public User createUser(RegisterDto registerDto) {
         User user = new User();
         user.setUsername(registerDto.getUsername().trim());
-        user.setDisplayName(registerDto.getDisplayname());
+        user.setDisplayName(registerDto.getDisplayName());
         user.setPassword(passwordEncoder.encode(registerDto.getPassword()));
         user.setRole(registerDto.getRole() == null
                 ? com.feswiesbaden.attendencemanagement.entity.Role.TEACHER

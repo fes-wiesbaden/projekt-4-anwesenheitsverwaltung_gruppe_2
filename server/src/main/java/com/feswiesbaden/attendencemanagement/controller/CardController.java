@@ -12,8 +12,6 @@ import com.feswiesbaden.attendencemanagement.service.SetRfidService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import com.feswiesbaden.attendencemanagement.service.SystemAuditLogService;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -78,7 +76,6 @@ public class CardController {
             return ResponseEntity.notFound().build();
         }
         if (!rfidRepository.existsById(dto.rfid_Id)) {
-            System.out.println("rfid doesnt exist");
             return ResponseEntity.notFound().build();
         }
 
