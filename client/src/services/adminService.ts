@@ -1,0 +1,104 @@
+import { ApiError, apiFetch } from "../api/http";
+import type { ApiAdminUser } from "../types/api";
+
+export type AdminAccess = "checking" | "admin" | "denied" | "unavailable";
+
+export async function getAdminUsers(): Promise<ApiAdminUser[]> {
+  const data = await apiFetch<ApiAdminUser[]>("/auth/admin/users");
+
+  // Only a successful response with the expected JSON shape counts.
+  if (!Array.isArray(data)) {
+    throw new Error("Unerwartete Antwort der Benutzer-API.");
+  }
+
+  return data;
+}
+
+export async function checkAdminAccess(): Promise<AdminAccess> {
+  try {
+    await getAdminUsers();
+    return "admin";
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      // Access denied does not by itself prove a TEACHER role.
+      return "denied";
+    }
+
+    return "unavailable";
+  }
+}
+
+export interface CreateTeacherInput {
+  displayname: string;
+  username: string;
+  password: string;
+}
+
+export function validateTeacher(input: CreateTeacherInput): string | null {
+  if (!input.displayname.trim()) return "Bitte einen Namen eingeben.";
+  if (!input.username.trim()) return "Bitte einen Benutzernamen eingeben.";
+  if (/\s/.test(input.username.trim())) return "Der Benutzername darf keine Leerzeichen enthalten.";
+  if (input.password.length < 10) return "Das Passwort muss mindestens 10 Zeichen lang sein.";
+  return null;
+}
+
+export async function createTeacher(input: CreateTeacherInput): Promise<ApiAdminUser> {
+  const error = validateTeacher(input);
+  if (error) throw new Error(error);
+  return apiFetch<ApiAdminUser>("/auth/admin/teacher/create", {
+    method: "POST",
+    body: JSON.stringify({
+      displayName: input.displayname.trim(),
+      username: input.username.trim(),
+      password: input.password,
+      role: "TEACHER",
+    }),
+  });
+}
+
+export interface AssignClassInput {
+  username: string;
+  classroomId: number;
+}
+
+export async function assignClass(
+  input: AssignClassInput,
+): Promise<unknown> {
+  if (!input.username.trim()) {
+    throw new Error("Bitte eine Lehrkraft wählen.");
+  }
+
+  if (
+    !Number.isInteger(input.classroomId) ||
+    input.classroomId <= 0
+  ) {
+    throw new Error("Bitte eine Klasse wählen.");
+  }
+
+  return apiFetch<unknown>("/auth/admin/assign-class", {
+    method: "POST",
+    body: JSON.stringify({
+      username: input.username.trim(),
+      classroomId: input.classroomId,
+    }),
+  });
+}
+
+export function describeAssignError(
+  error: unknown,
+): string {
+  if (error instanceof ApiError) {
+    switch (error.status) {
+      case 400:
+        return "Klassenzuweisung wurde abgelehnt.";
+      case 404:
+        return "Lehrkraft oder Klasse wurde nicht gefunden.";
+      case 401:
+        return "Bitte erneut anmelden.";
+      case 403:
+        return "Keine Berechtigung für die Klassenzuweisung.";
+    }
+  }
+
+  return "Die Klasse konnte nicht zugewiesen werden.";
+}

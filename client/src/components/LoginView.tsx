@@ -1,5 +1,14 @@
-import { useState } from "react";
-import { Box, Button, TextField, Alert } from "@mui/material";
+import {
+  useState,
+  type FormEvent,
+} from "react";
+
+import {
+  Alert,
+  Box,
+  Button,
+  TextField,
+} from "@mui/material";
 
 import "../css/main.css";
 
@@ -7,75 +16,163 @@ interface LoginViewProps {
   onLoginSuccess: () => void;
 }
 
-function LoginView({ onLoginSuccess }: LoginViewProps) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+interface LoginResponse {
+  token: string;
+}
 
-  const handleLogin = async () => {
+function LoginView({
+  onLoginSuccess,
+}: LoginViewProps) {
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [isLoading, setIsLoading] =
+    useState(false);
+
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
     setError(null);
     setIsLoading(true);
 
+    const formData =
+      new FormData(event.currentTarget);
+
+    const username =
+      String(
+        formData.get("username") ?? "",
+      ).trim();
+
+    const password =
+      String(
+        formData.get("password") ?? "",
+      );
+
     try {
-      const response = await fetch("http://localhost:4100/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ username, password }),
-      });
+      const response = await fetch(
+        "/api/auth/login",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            username,
+            password,
+          }),
+        },
+      );
 
       if (!response.ok) {
-        throw new Error("Login fehlgeschlagen");
+        if (
+          response.status === 401 ||
+          response.status === 403
+        ) {
+          setError(
+            "Benutzername oder Passwort falsch.",
+          );
+        } else {
+          setError(
+            `Anmeldung fehlgeschlagen (${response.status}).`,
+          );
+        }
+
+        return;
       }
 
-      const data = await response.json();
-      localStorage.setItem("token", data.token);
+      const data =
+        (await response.json()) as LoginResponse;
+
+      if (!data.token) {
+        setError(
+          "Der Server hat keinen Anmelde-Token zurückgegeben.",
+        );
+
+        return;
+      }
+
+      sessionStorage.setItem(
+        "token",
+        data.token,
+      );
 
       onLoginSuccess();
-    } catch {
-      setError("Benutzername oder Passwort falsch.");
+    } catch (error) {
+      console.error(
+        "Login-Fehler:",
+        error,
+      );
+
+      setError(
+        "Der Server ist momentan nicht erreichbar.",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleLogin();
-  };
-
   return (
-    <>
-      <h1 className="login-title">Login</h1>
-      <Box onKeyDown={handleKeyDown} className="login-wrapper">
-        <TextField
-          className="username-input"
-          label="Benutzername"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          fullWidth
-        />
-        <TextField
-          className="password-input"
-          label="Passwort"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          fullWidth
-        />
-        {error && <Alert severity="error">{error}</Alert>}
+    <main className="login-page">
+      <Box className="login-card">
+        <Box className="login-card-header">
+          <h1 className="login-title">
+            Willkommen
+          </h1>
 
-        <Box className="loginBtn-wrapper">
+          <p className="login-description">
+            Melden Sie sich an, um die
+            Anwesenheitsverwaltung zu öffnen.
+          </p>
+        </Box>
+
+        <Box
+          component="form"
+          className="login-form"
+          onSubmit={handleSubmit}
+        >
+          <TextField
+            name="username"
+            label="Benutzername"
+            fullWidth
+            autoComplete="username"
+            required
+          />
+
+          <TextField
+            name="password"
+            label="Passwort"
+            type="password"
+            fullWidth
+            autoComplete="current-password"
+            required
+          />
+
+          {error && (
+            <Alert severity="error">
+              {error}
+            </Alert>
+          )}
+
           <Button
+            className="login-button"
             variant="contained"
-            onClick={handleLogin}
-            disabled={isLoading || !username || !password}
+            size="large"
+            fullWidth
+            type="submit"
+            disabled={isLoading}
           >
-            {isLoading ? "Wird geprüft..." : "Einloggen"}
+            {isLoading
+              ? "Wird geprüft..."
+              : "Einloggen"}
           </Button>
         </Box>
       </Box>
-    </>
+    </main>
   );
 }
 
