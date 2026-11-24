@@ -38,7 +38,7 @@ public class SecurityConfig {
     private final UserDetailsService userDetailsService;
     private final IPBlockListFilter blockListFilter;
 
-    @Value("${app.cors.allowed-origins:http://localhost:5173, http://10.93.130.21:5173/ }")
+    @Value("${app.cors.allowed-origins:http://localhost:5173, http://10.93.130.21:5173 }")
     private String allowedOrigins;
 
     @Bean
