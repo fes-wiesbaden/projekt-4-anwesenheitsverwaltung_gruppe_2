@@ -1,6 +1,5 @@
 package com.feswiesbaden.attendencemanagement.controller;
 
-import com.feswiesbaden.attendencemanagement.dto.response.UserResponseDto;
 import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 import org.springframework.security.authentication.AuthenticationManager;

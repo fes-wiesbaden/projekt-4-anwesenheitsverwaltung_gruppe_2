@@ -47,6 +47,12 @@ import {
 import StatCard from "./attendance/StatCard";
 import StatusChip from "./attendance/StatusChip";
 
+interface ReportOutcome {
+  key: string;
+  report: ApiPeriodReport | null;
+  error: string | null;
+}
+
 function ReportsPage() {
   const today =
     new Date().toLocaleDateString("sv-SE");
@@ -57,38 +63,37 @@ function ReportsPage() {
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
 
-  const [report, setReport] =
-    useState<ApiPeriodReport | null>(null);
-
-  const [isLoading, setIsLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState<string | null>(null);
-
+  const [outcome, setOutcome] =
+    useState<ReportOutcome | null>(null);
   const rangeError = validateRange(
     from,
     to,
   );
+  const requestKey = `${from}|${to}`;
 
+  const current =
+    !rangeError && outcome?.key === requestKey
+      ? outcome
+      : null;
+
+  const report = current?.report ?? null;
+  const error = current?.error ?? null;
+  const isLoading = !rangeError && current === null;
   useEffect(() => {
     if (rangeError) {
-      setReport(null);
-      setError(null);
-      setIsLoading(false);
       return;
     }
 
     let cancelled = false;
 
-    setIsLoading(true);
-    setError(null);
-    setReport(null);
-
     getPeriodReport(from, to)
       .then((result) => {
         if (!cancelled) {
-          setReport(result);
+          setOutcome({
+            key: requestKey,
+            report: result,
+            error: null,
+          });
         }
       })
       .catch((err) => {
@@ -107,26 +112,25 @@ function ReportsPage() {
           err instanceof ApiError &&
           err.status === 403
         ) {
-          setError(
-            "Keine Berechtigung für diesen Bericht.",
-          );
+          setOutcome({
+            key: requestKey,
+            report: null,
+            error: "Keine Berechtigung für diesen Bericht.",
+          });
           return;
         }
 
-        setError(
-          "Bericht konnte nicht geladen werden.",
-        );
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        setOutcome({
+          key: requestKey,
+          report: null,
+          error: "Bericht konnte nicht geladen werden.",
+        });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [from, to, rangeError]);
+  }, [from, to, rangeError, requestKey]);
 
   const rows = useMemo(
     () =>

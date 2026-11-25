@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   Alert,
@@ -17,6 +17,10 @@ import type {
   AttendanceRow,
 } from "../../types/attendance";
 
+interface ContentProps extends Omit<EditAttendanceDialogProps, "row"> {
+  row: AttendanceRow;
+}
+
 import {
   toFormValues,
   validateEdit,
@@ -30,35 +34,24 @@ interface EditAttendanceDialogProps {
   onSave: (values: EditFormValues) => void;
 }
 
-function EditAttendanceDialog({
+function EditAttendanceDialogContent({
   row,
   isSaving,
   onClose,
   onSave,
-}: EditAttendanceDialogProps) {
+}: ContentProps) {
   const [values, setValues] =
-    useState<EditFormValues | null>(null);
+    useState<EditFormValues>(() =>
+      toFormValues(row),
+    );
 
   const [error, setError] =
     useState<string | null>(null);
 
-  useEffect(() => {
-    setValues(row ? toFormValues(row) : null);
-    setError(null);
-  }, [row]);
-
-  if (!row || !values) {
-    return null;
-  }
-
   const update = (
     patch: Partial<EditFormValues>,
   ) => {
-    setValues((current) =>
-      current
-        ? { ...current, ...patch }
-        : current,
-    );
+    setValues((current) => ({ ...current, ...patch }));
   };
 
   const handleSave = () => {
@@ -174,6 +167,16 @@ function EditAttendanceDialog({
       </DialogActions>
     </Dialog>
   );
+}
+
+function EditAttendanceDialog(props: EditAttendanceDialogProps) {
+  const { row, ...rest } = props;
+
+  if (!row) {
+    return null;
+  }
+
+  return <EditAttendanceDialogContent key={row.id} row={row} {...rest} />;
 }
 
 export default EditAttendanceDialog;

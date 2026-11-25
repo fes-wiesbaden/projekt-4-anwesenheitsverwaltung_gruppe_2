@@ -82,6 +82,8 @@ import {
 
 type StatusFilter = "ALL" | AttendanceStatus;
 
+const NO_ROWS: AttendanceRow[] = [];
+
 function ListView() {
   const [classes, setClasses] =
     useState<string[]>([]);
@@ -92,7 +94,7 @@ function ListView() {
   const [selectedDate, setSelectedDate] =
     useState(() =>
       new Date().toLocaleDateString("sv-SE"),
-  );
+    );
 
   const [searchTerm, setSearchTerm] =
     useState("");
@@ -100,8 +102,10 @@ function ListView() {
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("ALL");
 
-  const [classRows, setClassRows] =
+  const [loadedRows, setClassRows] =
     useState<AttendanceRow[]>([]);
+
+  const classRows = selectedClass ? loadedRows : NO_ROWS;
 
   const [isLoading, setIsLoading] =
     useState(false);
@@ -111,7 +115,7 @@ function ListView() {
 
   const [reloadKey, setReloadKey] =
     useState(0);
-  
+
   const [menuAnchor, setMenuAnchor] =
     useState<HTMLElement | null>(null);
 
@@ -136,52 +140,52 @@ function ListView() {
   const isToday =
     selectedDate === todayString;
   const silentReloadRef = useRef(false);
-    
-/*
- * Klassen aus dem Backend laden.
- */
+
+  /*
+   * Klassen aus dem Backend laden.
+   */
 
   useEffect(() => {
-  const loadClasses = async () => {
-    try {
-      const data =
-        await getAvailableClassrooms();
+    const loadClasses = async () => {
+      try {
+        const data =
+          await getAvailableClassrooms();
 
-      setClasses(data);
+        setClasses(data);
 
-      if (data.length > 0) {
-        setSelectedClass(
-          (currentClass) =>
-            data.includes(currentClass)
-              ? currentClass
-              : data[0],
+        if (data.length > 0) {
+          setSelectedClass(
+            (currentClass) =>
+              data.includes(currentClass)
+                ? currentClass
+                : data[0],
+          );
+        } else {
+          setSelectedClass("");
+        }
+      } catch (error) {
+        if (
+          error instanceof ApiError &&
+          (error.status === 401 ||
+            error.status === 403)
+        ) {
+          sessionStorage.removeItem("token");
+          window.location.reload();
+          return;
+        }
+
+        console.error(
+          "Klassen konnten nicht geladen werden.",
+          error,
         );
-      } else {
+
+        setClasses([]);
         setSelectedClass("");
       }
-    } catch (error) {
-      if (
-        error instanceof ApiError &&
-        (error.status === 401 ||
-          error.status === 403)
-      ) {
-        sessionStorage.removeItem("token");
-        window.location.reload();
-        return;
-      }
+    };
 
-      console.error(
-        "Klassen konnten nicht geladen werden.",
-        error,
-      );
-
-      setClasses([]);
-      setSelectedClass("");
-    }
-  };
-
-  void loadClasses();
-}, []);
+    void loadClasses();
+  }, []);
 
   /*
    * Schüler der aktuell ausgewählten Klasse.
@@ -189,7 +193,6 @@ function ListView() {
 
   useEffect(() => {
     if (!selectedClass) {
-      setClassRows([]);
       return;
     }
 
@@ -292,15 +295,15 @@ function ListView() {
   }, [isToday, selectedClass, isLoading, isActing]);
 
   const recentScanRows = useMemo(() => {
-  return [...classRows]
-    .filter((row) => row.checkIn !== null)
-    .sort((a, b) =>
-      (b.checkIn ?? "").localeCompare(
-        a.checkIn ?? "",
-      ),
-    )
-    .slice(0, 5);
-}, [classRows]);
+    return [...classRows]
+      .filter((row) => row.checkIn !== null)
+      .sort((a, b) =>
+        (b.checkIn ?? "").localeCompare(
+          a.checkIn ?? "",
+        ),
+      )
+      .slice(0, 5);
+  }, [classRows]);
 
   /*
    * Kennzahlen für die vier Dashboard-Karten.
@@ -352,7 +355,7 @@ function ListView() {
         const matchesStatus =
           statusFilter === "ALL" ||
           row.status ===
-            statusFilter;
+          statusFilter;
 
         return (
           matchesSearch &&
@@ -366,9 +369,9 @@ function ListView() {
     statusFilter,
   ]);
 
- /*
-  * Anwesenheitsdaten erneut vom Backend laden.
-  */
+  /*
+   * Anwesenheitsdaten erneut vom Backend laden.
+   */
 
   const handleRefresh = () => {
     setReloadKey(
@@ -702,7 +705,7 @@ function ListView() {
 
           {/* Filter und Aktionen */}
           <div className="attendance-toolbar-card">
-            
+
             <div className="toolbar-field">
               <FormControl fullWidth>
                 <InputLabel>
@@ -721,12 +724,12 @@ function ListView() {
                   }
                 >
                   {classes.map((classroom) => (
-                      <MenuItem
-                        key={classroom}
-                        value={classroom}
-                      >
-                        {classroom}
-                      </MenuItem>
+                    <MenuItem
+                      key={classroom}
+                      value={classroom}
+                    >
+                      {classroom}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -760,43 +763,43 @@ function ListView() {
                 {isLoading
                   ? "Wird aktualisiert..."
                   : "Anwesenheit aktualisieren"}
-            </Button>
+              </Button>
 
-            <Button
-              className="export-button"
-              variant="outlined"
-              startIcon={<DownloadOutlined />}
-              onClick={handleExport}
-            >
-              Exportieren
-            </Button>
+              <Button
+                className="export-button"
+                variant="outlined"
+                startIcon={<DownloadOutlined />}
+                onClick={handleExport}
+              >
+                Exportieren
+              </Button>
+            </div>
+
           </div>
 
-        </div>
-
-        {loadError && (
-          <Alert severity="error">
-            {loadError}
-          </Alert>
-        )}
-
-        {!isLoading && !loadError && noData && (
-          <Alert severity="info" sx={{ mb: 1.5 }}>
-            Für dieses Datum liegen keine erfassten
-            Anwesenheitsinformationen vor.
-            {` ${statistics.notRecorded} Schüler sind noch nicht erfasst.`}
-          </Alert>
-        )}
-
-        {!isLoading &&
-          !loadError &&
-          !noData &&
-          statistics.notRecorded > 0 && (
-            <Alert severity="info" sx={{ mb: 1.5 }}>
-              {statistics.notRecorded} Schüler sind
-              noch nicht erfasst.
+          {loadError && (
+            <Alert severity="error">
+              {loadError}
             </Alert>
           )}
+
+          {!isLoading && !loadError && noData && (
+            <Alert severity="info" sx={{ mb: 1.5 }}>
+              Für dieses Datum liegen keine erfassten
+              Anwesenheitsinformationen vor.
+              {` ${statistics.notRecorded} Schüler sind noch nicht erfasst.`}
+            </Alert>
+          )}
+
+          {!isLoading &&
+            !loadError &&
+            !noData &&
+            statistics.notRecorded > 0 && (
+              <Alert severity="info" sx={{ mb: 1.5 }}>
+                {statistics.notRecorded} Schüler sind
+                noch nicht erfasst.
+              </Alert>
+            )}
 
           {/* Kennzahlen */}
           <div className="stats-grid">
@@ -958,10 +961,10 @@ function ListView() {
                 initialState={{
                   pagination: {
                     paginationModel:
-                      {
-                        page: 0,
-                        pageSize: 10,
-                      },
+                    {
+                      page: 0,
+                      pageSize: 10,
+                    },
                   },
                 }}
                 localeText={{
@@ -972,39 +975,39 @@ function ListView() {
                   border: 0,
 
                   "& .MuiDataGrid-columnHeaders":
-                    {
-                      backgroundColor:
-                        "#f8fafc",
-                      borderBottom:
-                        "1px solid #e5e9f0",
-                    },
+                  {
+                    backgroundColor:
+                      "#f8fafc",
+                    borderBottom:
+                      "1px solid #e5e9f0",
+                  },
 
                   "& .MuiDataGrid-columnHeaderTitle":
-                    {
-                      fontWeight: 600,
-                      color:
-                        "#344054",
-                    },
+                  {
+                    fontWeight: 600,
+                    color:
+                      "#344054",
+                  },
 
                   "& .MuiDataGrid-cell":
-                    {
-                      borderBottom:
-                        "1px solid #eef1f5",
-                      color:
-                        "#344054",
-                    },
+                  {
+                    borderBottom:
+                      "1px solid #eef1f5",
+                    color:
+                      "#344054",
+                  },
 
                   "& .MuiDataGrid-row:hover":
-                    {
-                      backgroundColor:
-                        "#f8fbff",
-                    },
+                  {
+                    backgroundColor:
+                      "#f8fbff",
+                  },
 
                   "& .MuiDataGrid-footerContainer":
-                    {
-                      borderTop:
-                        "1px solid #e5e9f0",
-                    },
+                  {
+                    borderTop:
+                      "1px solid #e5e9f0",
+                  },
                 }}
               />
             </Box>

@@ -27,7 +27,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.time.Duration;
 import java.util.Collections;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity

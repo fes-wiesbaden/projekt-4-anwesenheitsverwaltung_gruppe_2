@@ -38,30 +38,24 @@ interface ClassOption {
   name: string;
 }
 
-function AssignClassDialog({
-  open,
+function AssignClassDialogContent({
   teachers,
   onClose,
   onAssigned,
-}: Props) {
+}: Omit<Props, "open">) {
   const [classes, setClasses] =
     useState<ClassOption[]>([]);
 
   const [username, setUsername] = useState("");
   const [classId, setClassId] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] =
     useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) return;
 
     let cancelled = false;
-
-    setClasses([]);
-    setLoading(true);
-    setError(null);
 
     Promise.all([
       getAvailableClassrooms(),
@@ -104,7 +98,7 @@ function AssignClassDialog({
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, []);
 
   const reset = () => {
     setUsername("");
@@ -151,7 +145,7 @@ function AssignClassDialog({
 
   return (
     <Dialog
-      open={open}
+      open
       onClose={close}
       fullWidth
       maxWidth="sm"
@@ -245,4 +239,13 @@ function AssignClassDialog({
   );
 }
 
+function AssignClassDialog(props: Props) {
+  const { open, ...rest } = props;
+
+  if (!open) {
+    return null;
+  }
+
+  return <AssignClassDialogContent {...rest} />;
+}
 export default AssignClassDialog;
