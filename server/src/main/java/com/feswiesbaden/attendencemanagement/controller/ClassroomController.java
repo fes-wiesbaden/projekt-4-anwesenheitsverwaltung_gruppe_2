@@ -128,35 +128,6 @@ public class ClassroomController {
         return ResponseEntity.ok(classroomService.getAvailableClassrooms(authentication.getName()));
     }
 
-    @DeleteMapping("/{classroomId}")
-    public ResponseEntity<String> deleteClassroom(
-            Authentication authentication,
-            @PathVariable Long classroomId) {
-
-        User user = getCurrentUser(authentication);
-
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        if (user.getRole() != Role.ADMIN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Only administrators can delete classrooms.");
-        }
-
-        Optional<Classroom> optionalClassroom =
-                classroomRepository.findById(classroomId);
-
-        if (optionalClassroom.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Classroom not found.");
-        }
-
-        classroomRepository.delete(optionalClassroom.get());
-
-        return ResponseEntity.ok("Classroom deleted successfully.");
-    }
-
     @GetMapping("/AttendanceDay")
     public ResponseEntity<List<AttendanceRecordResponseDto>> getAttendances(Authentication authentication,
             @RequestParam("classname") String Classname,

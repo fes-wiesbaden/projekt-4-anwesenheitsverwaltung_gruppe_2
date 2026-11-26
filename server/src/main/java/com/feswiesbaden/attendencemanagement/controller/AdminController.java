@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.List;
 import java.util.UUID;
 
+import com.feswiesbaden.attendencemanagement.repository.ClassroomRepository;
 import com.feswiesbaden.attendencemanagement.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,6 +44,7 @@ public class AdminController {
 
     private final StudentRepository studentRepository;
     private final AttendanceRepository attendanceRepository;
+    private final ClassroomRepository classroomRepository;
     private final AdminService adminService;
     private final ClassroomService classroomService;
     private final SystemAuditLogService auditLogService;
@@ -117,6 +119,25 @@ public class AdminController {
         userRepository.save(teacher);
         userRepository.delete(teacher);
         return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/classroom/{classroomId}")
+    public ResponseEntity<String> deleteClassroom(
+            Authentication authentication,
+            @PathVariable Long classroomId) {
+
+
+        Optional<Classroom> optionalClassroom =
+                classroomRepository.findById(classroomId);
+
+        if (optionalClassroom.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Classroom not found.");
+        }
+
+        classroomRepository.delete(optionalClassroom.get());
+
+        return ResponseEntity.ok("Classroom deleted successfully.");
     }
 
 
