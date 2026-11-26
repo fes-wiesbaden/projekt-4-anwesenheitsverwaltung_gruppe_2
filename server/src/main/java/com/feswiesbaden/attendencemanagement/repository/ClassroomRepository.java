@@ -21,7 +21,7 @@ public interface ClassroomRepository extends JpaRepository<Classroom, Long> {
                 WHERE t.username = :username
                    OR c.id = (SELECT u.myClassroom.id FROM User u WHERE u.username = :username)
             """)
-    List<String> findClassroomNamesByTeacherUsername(
+    List<Classroom> findClassroomNamesByTeacherUsername(
             @Param("username") String username);
 
     

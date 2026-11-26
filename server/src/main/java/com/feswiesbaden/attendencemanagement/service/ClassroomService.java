@@ -28,7 +28,7 @@ public class ClassroomService {
                 .orElseThrow(() -> new RuntimeException("Classroom nicht gefunden"));
     }
 
-    public List<String> getAvailableClassrooms(String username) {
+    public List<Classroom> getAvailableClassrooms(String username) {
         return classroomRepository.findClassroomNamesByTeacherUsername(username);
     }
 
