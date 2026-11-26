@@ -31,9 +31,17 @@ const DAY_LABEL: Record<string, string> = {
   SUNDAY: "Sonntag",
 };
 
+export interface KnownClassData {
+  /** Klassen-IDs aus der Klassenliste des Backends (Name -> ID) */
+  ids?: Record<string, number>;
+  /** Raumbezeichnungen aus der Klassenliste des Backends (Name -> Text) */
+  rooms?: Record<string, string>;
+}
+
 export function buildClassSummaries(
   names: string[],
   students: ApiStudent[],
+  known: KnownClassData = {},
 ): ClassSummary[] {
   return Array.from(new Set(names))
     .sort((a, b) => a.localeCompare(b, "de"))
@@ -48,10 +56,12 @@ export function buildClassSummaries(
 
       return {
         name,
-        id: classroom?.id ?? null,
-        roomLabel: room
-          ? `${room.roomName} (${room.roomNumber})`
-          : "Nicht angegeben",
+        id: known.ids?.[name] ?? classroom?.id ?? null,
+        roomLabel:
+          known.rooms?.[name] ??
+          (room
+            ? `${room.roomName} (${room.roomNumber})`
+            : "Nicht angegeben"),
         studentCount: inClass.length,
       };
     });

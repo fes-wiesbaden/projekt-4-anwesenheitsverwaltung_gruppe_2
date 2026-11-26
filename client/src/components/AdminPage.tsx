@@ -4,19 +4,27 @@ import {
   Box,
   Button,
   Chip,
+  IconButton,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
 import { ApiError } from "../api/http";
-import { getAdminUsers } from "../services/adminService";
+import {
+  deleteTeacher,
+  describeTeacherDeleteError,
+  getAdminUsers,
+} from "../services/adminService";
 
-import CreateTeacherDialog from "./admin/CreateTeacherDialog";
 import AssignClassDialog from "./admin/AssignClassDialog";
+import ConfirmDeleteDialog from "./admin/ConfirmDeleteDialog";
+import CreateTeacherDialog from "./admin/CreateTeacherDialog";
 
 import type { ApiAdminUser } from "../types/api";
 
@@ -69,6 +77,12 @@ function AdminPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
 
+  const [deleteTarget, setDeleteTarget] =
+    useState<ApiAdminUser | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] =
+    useState<string | null>(null);
+
   const teachers = users.filter(
     (user) => user.role === "TEACHER",
   );
@@ -117,6 +131,57 @@ function AdminPage() {
     setError(null);
     setReloadKey((value) => value + 1);
   };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleting) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteTeacher(deleteTarget.id);
+
+      setNotice(
+        `Lehrkraft ${deleteTarget.displayName || deleteTarget.username} wurde gelöscht.`,
+      );
+      setDeleteTarget(null);
+      refresh();
+    } catch (err) {
+      setDeleteError(describeTeacherDeleteError(err));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Nur Lehrkräfte können gelöscht werden, Administratoren nie.
+  const tableColumns: GridColDef<ApiAdminUser>[] = [
+    ...columns,
+    {
+      field: "actions",
+      headerName: "Aktionen",
+      width: 110,
+      sortable: false,
+      filterable: false,
+      disableColumnMenu: true,
+      renderCell: ({ row }) =>
+        row.role === "TEACHER" ? (
+          <Tooltip title="Lehrkraft löschen">
+            <IconButton
+              size="small"
+              color="error"
+              aria-label={`${row.displayName || row.username} löschen`}
+              onClick={() => {
+                setNotice(null);
+                setDeleteError(null);
+                setDeleteTarget(row);
+              }}
+            >
+              <DeleteOutlineIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        ) : null,
+    },
+  ];
 
   return (
     <section className="attendance-page page-scroll">
@@ -219,7 +284,7 @@ function AdminPage() {
         <Box sx={{ height: 440, width: "100%" }}>
           <DataGrid
             rows={rows}
-            columns={columns}
+            columns={tableColumns}
             loading={loading}
             disableRowSelectionOnClick
             pageSizeOptions={[10, 25]}
@@ -261,6 +326,18 @@ function AdminPage() {
           setAssignOpen(false);
           setNotice(message);
         }}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        title="Lehrkraft löschen?"
+        message={`${
+          deleteTarget?.displayName || deleteTarget?.username || ""
+        } wird dauerhaft gelöscht.`}
+        busy={deleting}
+        error={deleteError}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </section>
   );

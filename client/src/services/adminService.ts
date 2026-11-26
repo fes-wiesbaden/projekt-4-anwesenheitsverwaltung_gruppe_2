@@ -240,3 +240,129 @@ export function describeStudentError(
     ? "Der Schüler konnte nicht angelegt werden."
     : "Der Schüler konnte nicht gelöscht werden.";
 }
+
+
+/* ---------- Klassen und Lehrkräfte verwalten (nur Administratoren) ---------- */
+
+export interface ApiRoom {
+  id: number;
+  roomName: string;
+  roomNumber: string | null;
+}
+
+export async function getRooms(): Promise<ApiRoom[]> {
+  const data = await apiFetch<ApiRoom[]>("/room/getall");
+
+  if (!Array.isArray(data)) {
+    throw new Error("Unerwartete Antwort der Raum-API.");
+  }
+
+  return data;
+}
+
+export interface CreateClassInput {
+  classroomName: string;
+  roomId: number | null;
+}
+
+export function validateClassroom(
+  input: CreateClassInput,
+): string | null {
+  if (!input.classroomName.trim()) {
+    return "Bitte einen Klassennamen eingeben.";
+  }
+
+  if (
+    input.roomId === null ||
+    !Number.isInteger(input.roomId) ||
+    input.roomId <= 0
+  ) {
+    return "Bitte einen Raum wählen.";
+  }
+
+  return null;
+}
+
+export async function createClassroom(
+  input: CreateClassInput,
+): Promise<void> {
+  const message = validateClassroom(input);
+  if (message) throw new Error(message);
+
+  await apiFetch<unknown>("/classroom", {
+    method: "POST",
+    body: JSON.stringify({
+      classroomName: input.classroomName.trim(),
+      roomId: input.roomId,
+    }),
+  });
+}
+
+export async function deleteClassroom(
+  classroomId: number,
+): Promise<void> {
+  await apiFetch<unknown>(
+    `/auth/admin/classroom/${classroomId}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function deleteTeacher(
+  teacherId: string,
+): Promise<void> {
+  await apiFetch<void>(
+    `/auth/admin/teacher/${encodeURIComponent(teacherId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function describeClassError(
+  error: unknown,
+  action: "create" | "delete",
+): string {
+  if (error instanceof ApiError) {
+    switch (error.status) {
+      case 400:
+        return "Das Backend hat die Eingaben abgelehnt. Bitte überprüfen.";
+      case 401:
+        return "Bitte erneut anmelden.";
+      case 403:
+        return "Keine Berechtigung. Nur Administratoren dürfen Klassen verwalten.";
+      case 404:
+        return action === "create"
+          ? "Der gewählte Raum wurde nicht gefunden."
+          : "Die Klasse wurde nicht gefunden. Bitte die Liste neu laden.";
+      case 409:
+        return action === "create"
+          ? "Eine Klasse mit diesem Namen gibt es bereits."
+          : "Die Klasse kann nicht gelöscht werden, weil sie noch verwendet wird.";
+      case 500:
+        if (action === "delete") {
+          return "Die Klasse kann nicht gelöscht werden, solange ihr noch Schüler oder ein Stundenplan zugeordnet sind. Bitte zuerst die Schüler einer anderen Klasse zuweisen.";
+        }
+    }
+  }
+
+  return action === "create"
+    ? "Die Klasse konnte nicht angelegt werden."
+    : "Die Klasse konnte nicht gelöscht werden.";
+}
+
+export function describeTeacherDeleteError(error: unknown): string {
+  if (error instanceof ApiError) {
+    switch (error.status) {
+      case 401:
+        return "Bitte erneut anmelden.";
+      case 403:
+        return "Keine Berechtigung. Nur Administratoren dürfen Lehrkräfte löschen.";
+      case 404:
+        return "Die Lehrkraft wurde nicht gefunden. Bitte die Liste neu laden.";
+      case 409:
+        return "Die Lehrkraft kann nicht gelöscht werden, weil sie noch verwendet wird.";
+      case 500:
+        return "Die Lehrkraft konnte nicht gelöscht werden, weil sie noch Klassen zugeordnet ist.";
+    }
+  }
+
+  return "Die Lehrkraft konnte nicht gelöscht werden.";
+}

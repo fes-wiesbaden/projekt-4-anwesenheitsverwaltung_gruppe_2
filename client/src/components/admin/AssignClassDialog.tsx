@@ -17,7 +17,7 @@ import {
 } from "../../services/adminService";
 
 import {
-  getAvailableClassrooms,
+  getClassrooms,
 } from "../../services/classroomService";
 
 import {
@@ -58,14 +58,29 @@ function AssignClassDialogContent({
     let cancelled = false;
 
     Promise.all([
-      getAvailableClassrooms(),
+      getClassrooms(),
       getMyStudents(),
     ])
-      .then(([names, students]) => {
+      .then(([classrooms, students]) => {
         if (cancelled) return;
+
+        const names = classrooms.map(
+          (item) => item.classroomName,
+        );
 
         const options = new Map<number, ClassOption>();
 
+        // Neuer Backend-Stand: alle Klassen mit ID, auch ohne Schüler.
+        for (const item of classrooms) {
+          if (item.id !== null) {
+            options.set(item.id, {
+              id: item.id,
+              name: item.classroomName,
+            });
+          }
+        }
+
+        // Älterer Backend-Stand: IDs nur über die Schüler bekannt.
         for (const student of students) {
           const classroom = student.classroom;
 
@@ -191,7 +206,7 @@ function AssignClassDialogContent({
               loading
                 ? "Klassen werden geladen..."
                 : classes.length === 0
-                  ? "Keine Klassen mit Schülern gefunden."
+                  ? "Keine Klassen gefunden."
                   : "Klasse für die Lehrkraft auswählen."
             }
           >
@@ -205,10 +220,6 @@ function AssignClassDialogContent({
             ))}
           </TextField>
 
-          <Alert severity="info">
-            Hier werden Klassen mit mindestens einem
-            Schüler angezeigt.
-          </Alert>
         </Stack>
       </DialogContent>
 

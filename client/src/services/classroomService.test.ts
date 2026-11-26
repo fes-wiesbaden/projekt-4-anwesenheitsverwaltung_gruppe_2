@@ -35,4 +35,26 @@ describe("classroomService", () => {
     expect(normalizeClassroom("")).toBeNull();
     expect(normalizeClassroom({ id: 5 })).toBeNull();
   });
+
+  it("liest den Raum, wenn das Backend ihn mitliefert", () => {
+    expect(
+      normalizeClassroom({
+        id: 1,
+        classroomName: "10A",
+        room: { roomName: "Klassenraum 101", roomNumber: "R101" },
+      }),
+    ).toEqual({
+      id: 1,
+      classroomName: "10A",
+      roomLabel: "Klassenraum 101 (R101)",
+    });
+
+    expect(
+      normalizeClassroom({
+        id: 2,
+        classroomName: "10B",
+        room: { roomName: "Labor", roomNumber: null },
+      })?.roomLabel,
+    ).toBe("Labor");
+  });
 });

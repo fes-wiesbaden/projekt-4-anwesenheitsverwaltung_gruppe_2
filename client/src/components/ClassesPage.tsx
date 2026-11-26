@@ -4,16 +4,27 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   CircularProgress,
+  IconButton,
+  Tooltip,
   Typography,
 } from "@mui/material";
+
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
 import { ApiError } from "../api/http";
 
 import {
-  getAvailableClassrooms,
+  checkAdminAccess,
+  deleteClassroom,
+  describeClassError,
+} from "../services/adminService";
+
+import {
+  getClassrooms,
   getTimetable,
 } from "../services/classroomService";
 
@@ -31,6 +42,9 @@ import {
   type ClassSummary,
 } from "../utils/classSummary";
 
+import ConfirmDeleteDialog from "./admin/ConfirmDeleteDialog";
+import CreateClassDialog from "./admin/CreateClassDialog";
+
 function ClassesPage() {
   const [summaries, setSummaries] =
     useState<ClassSummary[]>([]);
@@ -46,19 +60,85 @@ function ClassesPage() {
   const [error, setError] =
     useState<string | null>(null);
 
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] =
+    useState<ClassSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] =
+    useState<string | null>(null);
+
+  // Anlegen und Löschen sind nur für Administratoren sichtbar.
+  useEffect(() => {
+    let cancelled = false;
+
+    checkAdminAccess().then((access) => {
+      if (!cancelled && access === "admin") {
+        setIsAdmin(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const reload = () => {
+    setIsLoading(true);
+    setReloadKey((key) => key + 1);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleteTarget.id === null || deleting) {
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      await deleteClassroom(deleteTarget.id);
+
+      setNotice(`Klasse ${deleteTarget.name} wurde gelöscht.`);
+      setDeleteTarget(null);
+      reload();
+    } catch (err) {
+      setDeleteError(describeClassError(err, "delete"));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
     const loadClasses = async () => {
       try {
-        const [names, students] = await Promise.all([
-          getAvailableClassrooms(),
+        const [classrooms, students] = await Promise.all([
+          getClassrooms(),
           getMyStudents(),
         ]);
 
+        const ids: Record<string, number> = {};
+        const rooms: Record<string, string> = {};
+
+        for (const item of classrooms) {
+          if (item.id !== null) {
+            ids[item.classroomName] = item.id;
+          }
+
+          if (item.roomLabel) {
+            rooms[item.classroomName] = item.roomLabel;
+          }
+        }
+
         const list = buildClassSummaries(
-          names,
+          classrooms.map((item) => item.classroomName),
           students,
+          { ids, rooms },
         );
 
         const tables: Record<
@@ -138,7 +218,7 @@ function ClassesPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   return (
     <section className="attendance-page page-scroll">
@@ -150,7 +230,29 @@ function ClassesPage() {
             Schülerzahl und Stundenplan.
           </p>
         </div>
+
+        {isAdmin && (
+          <Button
+            variant="contained"
+            onClick={() => {
+              setNotice(null);
+              setCreateOpen(true);
+            }}
+          >
+            Klasse anlegen
+          </Button>
+        )}
       </div>
+
+      {notice && (
+        <Alert
+          severity="success"
+          sx={{ mb: 2 }}
+          onClose={() => setNotice(null)}
+        >
+          {notice}
+        </Alert>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -196,12 +298,44 @@ function ClassesPage() {
                 variant="outlined"
               >
                 <CardContent>
-                  <Typography
-                    variant="h6"
-                    sx={{ mb: 1 }}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 1,
+                      mb: 1,
+                    }}
                   >
-                    Klasse {item.name}
-                  </Typography>
+                    <Typography variant="h6">
+                      Klasse {item.name}
+                    </Typography>
+
+                    {isAdmin && (
+                      <Tooltip
+                        title={
+                          item.id === null
+                            ? "Klassen-ID nicht verfügbar"
+                            : "Klasse löschen"
+                        }
+                      >
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            aria-label={`Klasse ${item.name} löschen`}
+                            disabled={item.id === null}
+                            onClick={() => {
+                              setDeleteError(null);
+                              setDeleteTarget(item);
+                            }}
+                          >
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    )}
+                  </Box>
 
                   <Typography
                     variant="body2"
@@ -266,6 +400,34 @@ function ClassesPage() {
           })}
         </Box>
       )}
+
+      {createOpen && (
+        <CreateClassDialog
+          onClose={() => setCreateOpen(false)}
+          onCreated={(name) => {
+            setCreateOpen(false);
+            setNotice(`Klasse ${name} wurde angelegt.`);
+            reload();
+          }}
+        />
+      )}
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        title="Klasse löschen?"
+        message={
+          deleteTarget
+            ? `Klasse ${deleteTarget.name} wird dauerhaft gelöscht.` +
+              (deleteTarget.studentCount > 0
+                ? ` Ihr sind noch ${deleteTarget.studentCount} Schüler zugeordnet.`
+                : "")
+            : ""
+        }
+        busy={deleting}
+        error={deleteError}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </section>
   );
 }
