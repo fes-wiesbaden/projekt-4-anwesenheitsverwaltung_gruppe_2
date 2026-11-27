@@ -31,7 +31,11 @@ import {
   type ClassSummary,
 } from "../utils/classSummary";
 
-function ClassesPage() {
+type ClassesPageProps = {
+  isAdmin: boolean
+}
+
+function ClassesPage({isAdmin}: ClassesPageProps) {
   const [summaries, setSummaries] =
     useState<ClassSummary[]>([]);
 
@@ -49,10 +53,10 @@ function ClassesPage() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadClasses = async () => {
+    const loadClasses = async (isAdmin: boolean) => {
       try {
         const [names, students] = await Promise.all([
-          getAvailableClassrooms(),
+          getAvailableClassrooms(isAdmin),
           getMyStudents(),
         ]);
 
@@ -133,7 +137,7 @@ function ClassesPage() {
       }
     };
 
-    void loadClasses();
+    void loadClasses(isAdmin);
 
     return () => {
       cancelled = true;

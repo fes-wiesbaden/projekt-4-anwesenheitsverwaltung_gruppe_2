@@ -113,7 +113,7 @@ function App() {
             ) : currentPage === "students" ? (
               <StudentsPage />
             ) : currentPage === "classes" ? (
-              <ClassesPage />
+              <ClassesPage isAdmin={isAdmin} />
             ) : currentPage === "dashboard" ? (
               <DashboardPage onOpenAttendance={() => setPage("attendance")}/>
             ) : currentPage === "reports" ? (
