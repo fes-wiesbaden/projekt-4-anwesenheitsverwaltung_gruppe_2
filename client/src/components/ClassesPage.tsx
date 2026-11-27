@@ -42,10 +42,18 @@ import {
   type ClassSummary,
 } from "../utils/classSummary";
 
+<<<<<<< HEAD
 import ConfirmDeleteDialog from "./admin/ConfirmDeleteDialog";
 import CreateClassDialog from "./admin/CreateClassDialog";
 
 function ClassesPage() {
+=======
+type ClassesPageProps = {
+  isAdmin: boolean
+}
+
+function ClassesPage({isAdmin}: ClassesPageProps) {
+>>>>>>> origin/main
   const [summaries, setSummaries] =
     useState<ClassSummary[]>([]);
 
@@ -115,10 +123,15 @@ function ClassesPage() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadClasses = async () => {
+    const loadClasses = async (isAdmin: boolean) => {
       try {
+<<<<<<< HEAD
         const [classrooms, students] = await Promise.all([
           getClassrooms(),
+=======
+        const [names, students] = await Promise.all([
+          getAvailableClassrooms(isAdmin),
+>>>>>>> origin/main
           getMyStudents(),
         ]);
 
@@ -213,7 +226,7 @@ function ClassesPage() {
       }
     };
 
-    void loadClasses();
+    void loadClasses(isAdmin);
 
     return () => {
       cancelled = true;

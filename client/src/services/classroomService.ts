@@ -1,6 +1,7 @@
 import { apiFetch } from "../api/http";
 import type { ApiTimetableEntry } from "../types/api";
 
+<<<<<<< HEAD
 export interface ClassroomInfo {
   id: number | null;
   classroomName: string;
@@ -63,6 +64,19 @@ export async function getClassrooms(): Promise<ClassroomInfo[]> {
 export async function getAvailableClassrooms(): Promise<string[]> {
   const classes = await getClassrooms();
   return classes.map((c) => c.classroomName);
+=======
+export async function getAvailableClassrooms(isAdmin: boolean): Promise<string[]> {
+
+  if (isAdmin) {
+    return apiFetch<string[]>(
+      "/classroom/allClassrooms",
+    );
+  } else {
+    return apiFetch<string[]>(
+      "/classroom/my",
+    );
+  }
+>>>>>>> origin/main
 }
 
 export function getTimetable(
