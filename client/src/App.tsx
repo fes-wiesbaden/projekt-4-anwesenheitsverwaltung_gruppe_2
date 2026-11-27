@@ -109,13 +109,13 @@ function App() {
               </Alert>
             )}
             {currentPage === "attendance" ? (
-              <ListView />
+              <ListView isAdmin={isAdmin} />
             ) : currentPage === "students" ? (
               <StudentsPage />
             ) : currentPage === "classes" ? (
               <ClassesPage isAdmin={isAdmin} />
             ) : currentPage === "dashboard" ? (
-              <DashboardPage onOpenAttendance={() => setPage("attendance")}/>
+              <DashboardPage isAdmin={isAdmin} onOpenAttendance={() => setPage("attendance")}/>
             ) : currentPage === "reports" ? (
               <ReportsPage />
             ) : currentPage === "settings" ? (

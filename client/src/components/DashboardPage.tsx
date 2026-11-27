@@ -37,6 +37,7 @@ import { getPresetRange } from "../utils/reportRows";
 
 interface DashboardPageProps {
   onOpenAttendance: () => void;
+  isAdmin: boolean;
 }
 
 interface DashboardData {
@@ -47,6 +48,7 @@ interface DashboardData {
 
 function DashboardPage({
   onOpenAttendance,
+  isAdmin
 }: DashboardPageProps) {
   const [today] = useState(
     () => new Date().toLocaleDateString("sv-SE"),
@@ -68,7 +70,7 @@ function DashboardPage({
 
     Promise.all([
       getPeriodReport(range.from, range.to),
-      getAvailableClassrooms(),
+      getAvailableClassrooms(isAdmin),
       getMyStudents(),
     ])
       .then(([report, classes, students]) => {

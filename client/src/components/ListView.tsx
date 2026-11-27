@@ -84,7 +84,11 @@ type StatusFilter = "ALL" | AttendanceStatus;
 
 const NO_ROWS: AttendanceRow[] = [];
 
-function ListView() {
+type ListViewProps = {
+  isAdmin: boolean;
+}
+
+function ListView({isAdmin}: ListViewProps) {
   const [classes, setClasses] =
     useState<string[]>([]);
 
@@ -149,7 +153,7 @@ function ListView() {
     const loadClasses = async () => {
       try {
         const data =
-          await getAvailableClassrooms();
+          await getAvailableClassrooms(isAdmin);
 
         setClasses(data);
 
