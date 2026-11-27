@@ -1,16 +1,6 @@
+import { useEffect, useMemo, useState } from "react";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  Alert,
-  Button,
-  MenuItem,
-  TextField,
-} from "@mui/material";
+import { Alert, Button, Menu, MenuItem, TextField } from "@mui/material";
 
 import {
   CheckCircleOutlined,
@@ -20,17 +10,12 @@ import {
   Schedule,
 } from "@mui/icons-material";
 
-import {
-  DataGrid,
-  type GridColDef,
-} from "@mui/x-data-grid";
+import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 
 import { ApiError } from "../api/http";
 import { getPeriodReport } from "../services/reportService";
 
-import type {
-  ApiPeriodReport,
-} from "../types/api";
+import type { ApiPeriodReport } from "../types/api";
 
 import { formatQuote } from "../utils/dashboardCards";
 import { downloadCsv } from "../utils/download";
@@ -54,27 +39,18 @@ interface ReportOutcome {
 }
 
 function ReportsPage() {
-  const today =
-    new Date().toLocaleDateString("sv-SE");
+  const today = new Date().toLocaleDateString("sv-SE");
 
-  const [preset, setPreset] =
-    useState<ReportPreset>("today");
+  const [preset, setPreset] = useState<ReportPreset>("today");
 
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
 
-  const [outcome, setOutcome] =
-    useState<ReportOutcome | null>(null);
-  const rangeError = validateRange(
-    from,
-    to,
-  );
+  const [outcome, setOutcome] = useState<ReportOutcome | null>(null);
+  const rangeError = validateRange(from, to);
   const requestKey = `${from}|${to}`;
 
-  const current =
-    !rangeError && outcome?.key === requestKey
-      ? outcome
-      : null;
+  const current = !rangeError && outcome?.key === requestKey ? outcome : null;
 
   const report = current?.report ?? null;
   const error = current?.error ?? null;
@@ -99,19 +75,13 @@ function ReportsPage() {
       .catch((err) => {
         if (cancelled) return;
 
-        if (
-          err instanceof ApiError &&
-          err.status === 401
-        ) {
+        if (err instanceof ApiError && err.status === 401) {
           sessionStorage.removeItem("token");
           window.location.reload();
           return;
         }
 
-        if (
-          err instanceof ApiError &&
-          err.status === 403
-        ) {
+        if (err instanceof ApiError && err.status === 403) {
           setOutcome({
             key: requestKey,
             report: null,
@@ -133,23 +103,27 @@ function ReportsPage() {
   }, [from, to, rangeError, requestKey]);
 
   const rows = useMemo(
-    () =>
-      report && !rangeError
-        ? buildReportRows(report.attendance)
-        : [],
+    () => (report && !rangeError ? buildReportRows(report.attendance) : []),
     [report, rangeError],
   );
 
-  const handlePreset = (
-    value: ReportPreset,
-  ) => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+
+  const handlePreset = (value: ReportPreset) => {
     setPreset(value);
 
     if (value !== "custom") {
-      const range = getPresetRange(
-        value,
-        today,
-      );
+      const range = getPresetRange(value, today);
 
       setFrom(range.from);
       setTo(range.to);
@@ -157,10 +131,7 @@ function ReportsPage() {
   };
 
   const handleExport = () => {
-    downloadCsv(
-      `bericht-${from}-${to}.csv`,
-      buildReportCsv(rows),
-    );
+    downloadCsv(`bericht-${from}-${to}.csv`, buildReportCsv(rows));
   };
 
   const columns: GridColDef[] = [
@@ -185,33 +156,26 @@ function ReportsPage() {
       headerName: "Status",
       width: 160,
       sortable: false,
-      renderCell: (params) => (
-        <StatusChip
-          status={params.row.status}
-        />
-      ),
+      renderCell: (params) => <StatusChip status={params.row.status} />,
     },
     {
       field: "checkIn",
       headerName: "Check-in",
       width: 110,
-      renderCell: (params) =>
-        params.value ?? "–",
+      renderCell: (params) => params.value ?? "–",
     },
     {
       field: "checkOut",
       headerName: "Check-out",
       width: 110,
-      renderCell: (params) =>
-        params.value ?? "–",
+      renderCell: (params) => params.value ?? "–",
     },
     {
       field: "reason",
       headerName: "Grund",
       flex: 1,
       minWidth: 160,
-      renderCell: (params) =>
-        params.value ?? "–",
+      renderCell: (params) => params.value ?? "–",
     },
   ];
 
@@ -220,27 +184,18 @@ function ReportsPage() {
       <div className="page-heading">
         <div>
           <h1>Berichte</h1>
-          <p>
-            Anwesenheitsberichte für einen
-            ausgewählten Zeitraum.
-          </p>
+          <p>Anwesenheitsberichte für einen ausgewählten Zeitraum.</p>
         </div>
       </div>
 
       {error && (
-        <Alert
-          severity="error"
-          sx={{ mb: 2 }}
-        >
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
 
       {rangeError && (
-        <Alert
-          severity="warning"
-          sx={{ mb: 2 }}
-        >
+        <Alert severity="warning" sx={{ mb: 2 }}>
           {rangeError}
         </Alert>
       )}
@@ -285,10 +240,7 @@ function ReportsPage() {
         <div className="attendance-table-header">
           <div>
             <h2>Einträge</h2>
-            <p>
-              {rows.length} Einträge
-              im gewählten Zeitraum
-            </p>
+            <p>{rows.length} Einträge im gewählten Zeitraum</p>
           </div>
 
           <div className="table-controls">
@@ -298,27 +250,17 @@ function ReportsPage() {
               label="Zeitraum"
               value={preset}
               onChange={(event) =>
-                handlePreset(
-                  event.target.value as ReportPreset,
-                )
+                handlePreset(event.target.value as ReportPreset)
               }
               sx={{ minWidth: 150 }}
             >
-              <MenuItem value="today">
-                Heute
-              </MenuItem>
+              <MenuItem value="today">Heute</MenuItem>
 
-              <MenuItem value="week">
-                Letzte 7 Tage
-              </MenuItem>
+              <MenuItem value="week">Letzte 7 Tage</MenuItem>
 
-              <MenuItem value="month">
-                Dieser Monat
-              </MenuItem>
+              <MenuItem value="month">Dieser Monat</MenuItem>
 
-              <MenuItem value="custom">
-                Frei wählen
-              </MenuItem>
+              <MenuItem value="custom">Frei wählen</MenuItem>
             </TextField>
 
             <TextField
@@ -327,9 +269,7 @@ function ReportsPage() {
               label="Von"
               value={from}
               disabled={preset !== "custom"}
-              onChange={(event) =>
-                setFrom(event.target.value)
-              }
+              onChange={(event) => setFrom(event.target.value)}
               slotProps={{
                 inputLabel: {
                   shrink: true,
@@ -343,9 +283,7 @@ function ReportsPage() {
               label="Bis"
               value={to}
               disabled={preset !== "custom"}
-              onChange={(event) =>
-                setTo(event.target.value)
-              }
+              onChange={(event) => setTo(event.target.value)}
               slotProps={{
                 inputLabel: {
                   shrink: true,
@@ -354,17 +292,32 @@ function ReportsPage() {
             />
 
             <Button
+              id="export-button"
+              aria-controls={open ? "export-menu" : undefined}
+              aria-haspopup="true"
+              aria-expanded={open}
+              onClick={handleClick}
               variant="outlined"
               startIcon={<DownloadOutlined />}
-              onClick={handleExport}
-              disabled={
-                isLoading ||
-                Boolean(rangeError) ||
-                rows.length === 0
-              }
+              disabled={isLoading || Boolean(rangeError) || rows.length === 0}
             >
               Exportieren
             </Button>
+
+            <Menu
+              id="export-menu"
+              anchorEl={anchorEl}
+              open={open}
+              onClose={handleClose}
+              slotProps={{
+                list: {
+                  "aria-labelledby": "export-button",
+                },
+              }}
+            >
+              <MenuItem onClick={handleExport}>CSV</MenuItem>
+              <MenuItem onClick={handleClose}>PDF</MenuItem> { /** TODO: PDF Export funktional */}
+            </Menu>
           </div>
         </div>
 
@@ -379,11 +332,7 @@ function ReportsPage() {
             rows={rows}
             columns={columns}
             disableRowSelectionOnClick
-            pageSizeOptions={[
-              10,
-              25,
-              50,
-            ]}
+            pageSizeOptions={[10, 25, 50]}
             initialState={{
               pagination: {
                 paginationModel: {
@@ -393,10 +342,8 @@ function ReportsPage() {
               },
             }}
             localeText={{
-              paginationRowsPerPage:
-                "Zeilen pro Seite:",
-              noRowsLabel:
-                "Keine Einträge im Zeitraum",
+              paginationRowsPerPage: "Zeilen pro Seite:",
+              noRowsLabel: "Keine Einträge im Zeitraum",
             }}
             sx={{
               border: 0,
