@@ -1,7 +1,6 @@
-import { apiFetch } from "../api/http";
+import { ApiError, apiFetch } from "../api/http";
 import type { ApiTimetableEntry } from "../types/api";
 
-<<<<<<< HEAD
 export interface ClassroomInfo {
   id: number | null;
   classroomName: string;
@@ -51,32 +50,45 @@ export function normalizeClassroom(
   return null;
 }
 
-export async function getClassrooms(): Promise<ClassroomInfo[]> {
-  const raw = await apiFetch<RawClassroom[]>(
-    "/classroom/allClassrooms",
-  );
+async function fetchRawClassrooms(
+  isAdmin?: boolean,
+): Promise<RawClassroom[]> {
+  // Administratoren sehen alle Klassen, Lehrkräfte nur ihre eigenen.
+  if (isAdmin === true) {
+    return apiFetch<RawClassroom[]>("/classroom/allClassrooms");
+  }
+
+  if (isAdmin === false) {
+    return apiFetch<RawClassroom[]>("/classroom/my");
+  }
+
+  // Rolle unbekannt: erst alle Klassen versuchen, bei 403 die eigenen.
+  try {
+    return await apiFetch<RawClassroom[]>("/classroom/allClassrooms");
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 403) {
+      return apiFetch<RawClassroom[]>("/classroom/my");
+    }
+
+    throw err;
+  }
+}
+
+export async function getClassrooms(
+  isAdmin?: boolean,
+): Promise<ClassroomInfo[]> {
+  const raw = await fetchRawClassrooms(isAdmin);
 
   return raw
     .map(normalizeClassroom)
     .filter((c): c is ClassroomInfo => c !== null);
 }
 
-export async function getAvailableClassrooms(): Promise<string[]> {
-  const classes = await getClassrooms();
+export async function getAvailableClassrooms(
+  isAdmin?: boolean,
+): Promise<string[]> {
+  const classes = await getClassrooms(isAdmin);
   return classes.map((c) => c.classroomName);
-=======
-export async function getAvailableClassrooms(isAdmin: boolean): Promise<string[]> {
-
-  if (isAdmin) {
-    return apiFetch<string[]>(
-      "/classroom/allClassrooms",
-    );
-  } else {
-    return apiFetch<string[]>(
-      "/classroom/my",
-    );
-  }
->>>>>>> origin/main
 }
 
 export function getTimetable(

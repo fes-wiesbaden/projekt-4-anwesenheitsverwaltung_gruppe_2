@@ -18,7 +18,6 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import { ApiError } from "../api/http";
 
 import {
-  checkAdminAccess,
   deleteClassroom,
   describeClassError,
 } from "../services/adminService";
@@ -42,18 +41,14 @@ import {
   type ClassSummary,
 } from "../utils/classSummary";
 
-<<<<<<< HEAD
 import ConfirmDeleteDialog from "./admin/ConfirmDeleteDialog";
 import CreateClassDialog from "./admin/CreateClassDialog";
 
-function ClassesPage() {
-=======
 type ClassesPageProps = {
-  isAdmin: boolean
-}
+  isAdmin: boolean;
+};
 
-function ClassesPage({isAdmin}: ClassesPageProps) {
->>>>>>> origin/main
+function ClassesPage({ isAdmin }: ClassesPageProps) {
   const [summaries, setSummaries] =
     useState<ClassSummary[]>([]);
 
@@ -68,7 +63,6 @@ function ClassesPage({isAdmin}: ClassesPageProps) {
   const [error, setError] =
     useState<string | null>(null);
 
-  const [isAdmin, setIsAdmin] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -78,21 +72,6 @@ function ClassesPage({isAdmin}: ClassesPageProps) {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] =
     useState<string | null>(null);
-
-  // Anlegen und Löschen sind nur für Administratoren sichtbar.
-  useEffect(() => {
-    let cancelled = false;
-
-    checkAdminAccess().then((access) => {
-      if (!cancelled && access === "admin") {
-        setIsAdmin(true);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const reload = () => {
     setIsLoading(true);
@@ -123,15 +102,10 @@ function ClassesPage({isAdmin}: ClassesPageProps) {
   useEffect(() => {
     let cancelled = false;
 
-    const loadClasses = async (isAdmin: boolean) => {
+    const loadClasses = async () => {
       try {
-<<<<<<< HEAD
         const [classrooms, students] = await Promise.all([
-          getClassrooms(),
-=======
-        const [names, students] = await Promise.all([
-          getAvailableClassrooms(isAdmin),
->>>>>>> origin/main
+          getClassrooms(isAdmin),
           getMyStudents(),
         ]);
 
@@ -226,12 +200,12 @@ function ClassesPage({isAdmin}: ClassesPageProps) {
       }
     };
 
-    void loadClasses(isAdmin);
+    void loadClasses();
 
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [reloadKey, isAdmin]);
 
   return (
     <section className="attendance-page page-scroll">
